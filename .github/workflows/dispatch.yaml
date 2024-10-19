@@ -8,6 +8,7 @@ on:
         default: all
         options:
           - all
+          - grafana
           - openldap
           - redis
 
@@ -19,6 +20,10 @@ jobs:
     strategy:
       matrix:
         container:
+          - name: grafana
+            packages: grafana
+            user: grafana:grafana
+            entrypoint: /usr/local/bin/grafana
           - name: openldap
             packages: FreeBSD-libsqlite3 openldap26-server
             entrypoint: /usr/local/libexec/slapd

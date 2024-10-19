@@ -40,7 +40,10 @@ jobs:
           run: |
             rm -f Containerfile
             echo 'FROM ghcr.io/cynix/freebsd:minimal' >> Containerfile
-            echo 'RUN pkg install -y ${{ fromJSON(inputs.container).packages }} && pkg clean -a -y && rm -rf /var/db/pkg/repos' >> Containerfile
+            echo 'RUN pkg install -y ${{ fromJSON(inputs.container).packages }} && pkg clean -a -y && rm -rf /var/db/pkg/repos/*' >> Containerfile
+            if [ -n "${{ fromJSON(inputs.container).user }}" ]; then
+              echo 'USER ${{ fromJSON(inputs.container).user }}' >> Containerfile
+            fi
             echo 'ENTRYPOINT ["${{ fromJSON(inputs.container).entrypoint }}"]' >> Containerfile
             cat Containerfile
 

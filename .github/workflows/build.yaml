@@ -39,7 +39,14 @@ jobs:
 
           run: |
             rm -f Containerfile
-            echo 'FROM ghcr.io/cynix/freebsd:minimal' >> Containerfile
+
+            NAME=${{ fromJSON(inputs.container).name }}
+            BASE=${{ fromJSON(inputs.container).base }}
+            : ${BASE=freebsd:minimal}
+            PLATFORMS=${{ fromJSON(inputs.container).platforms }}
+            : ${PLATFORMS=freebsd/amd64,freebsd/arm64}
+
+            echo "FROM ghcr.io/cynix/$BASE" >> Containerfile
             echo 'RUN pkg install -y ${{ fromJSON(inputs.container).packages }} && pkg clean -a -y && rm -rf /var/db/pkg/repos/*' >> Containerfile
             if [ -n "${{ fromJSON(inputs.container).user }}" ]; then
               echo 'USER ${{ fromJSON(inputs.container).user }}' >> Containerfile
@@ -47,6 +54,5 @@ jobs:
             echo 'ENTRYPOINT ["${{ fromJSON(inputs.container).entrypoint }}"]' >> Containerfile
             cat Containerfile
 
-            NAME=${{ fromJSON(inputs.container).name }}
-            podman build --manifest=ghcr.io/cynix/$NAME:latest --network=host --platform=freebsd/amd64,freebsd/arm64 --pull=always .
+            podman build --manifest=ghcr.io/cynix/$NAME:latest --network=host --platform=$PLATFORMS --pull=always .
             podman manifest push ghcr.io/cynix/$NAME:latest

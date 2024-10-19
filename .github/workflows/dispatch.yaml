@@ -10,6 +10,7 @@ on:
           - all
           - grafana
           - openldap
+          - qbittorrent
           - redis
 
 permissions:
@@ -27,6 +28,12 @@ jobs:
           - name: openldap
             packages: FreeBSD-libsqlite3 openldap26-server
             entrypoint: /usr/local/libexec/slapd
+          - name: qbittorrent
+            base: freebsd:small
+            platforms: freebsd/amd64
+            packages: qbittorrent-nox
+            user: qbittorrent:qbittorrent
+            entrypoint: /usr/local/bin/qbittorrent-nox
           - name: redis
             packages: redis
             entrypoint: /usr/local/bin/redis-server

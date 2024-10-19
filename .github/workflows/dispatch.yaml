@@ -1,0 +1,32 @@
+name: Dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        type: choice
+        default: all
+        options:
+          - all
+          - openldap
+          - redis
+
+permissions:
+  packages: write
+
+jobs:
+  dispatch:
+    strategy:
+      matrix:
+        container:
+          - name: openldap
+            packages: FreeBSD-libsqlite3 openldap26-server
+            entrypoint: /usr/local/libexec/slapd
+          - name: redis
+            packages: redis
+            entrypoint: /usr/local/bin/redis-server
+    name: ${{ matrix.container.name }}
+    uses: ./.github/workflows/build.yaml
+    with:
+      container: ${{ toJSON(matrix.container) }}
+      build: ${{ inputs.build }}

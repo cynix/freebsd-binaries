@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      container:
+        type: string
+        required: true
+      build:
+        type: string
+        required: true
+
+permissions:
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        if: ${{ inputs.build == 'all' || fromJSON(inputs.container).name == inputs.build }}
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          sync: sshfs
+          copyback: false
+
+          prepare: |
+            sysctl net.inet.ip.forwarding=1
+
+            mkdir -p /usr/local/etc/pkg/repos
+            echo 'FreeBSD: { url: "pkg+https://pkg.freebsd.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
+            pkg install -y podman-suite qemu-user-static
+            service qemu_user_static onestart
+
+            sed -i '' -e 's/zfs/vfs/g' /usr/local/etc/containers/storage.conf
+            mkdir -p /var/db/containers/storage
+            podman login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
+
+          run: |
+            rm -f Containerfile
+            echo 'FROM ghcr.io/cynix/freebsd:minimal' >> Containerfile
+            echo 'RUN pkg install -y ${{ fromJSON(inputs.container).packages }} && pkg clean -a -y && rm -rf /var/db/pkg/repos' >> Containerfile
+            echo 'ENTRYPOINT ["${{ fromJSON(inputs.container).entrypoint }}"]' >> Containerfile
+            cat Containerfile
+
+            NAME=${{ fromJSON(inputs.container).name }}
+            podman build --manifest=ghcr.io/cynix/$NAME:latest --network=host --platform=freebsd/amd64,freebsd/arm64 --pull=always .
+            podman manifest push ghcr.io/cynix/$NAME:latest

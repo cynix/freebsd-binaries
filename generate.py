@@ -16,7 +16,7 @@ def main(container: dict[str, str]) -> None:
         print(f"FROM ghcr.io/cynix/{base}", file=cf)
 
         if 'pkg' in container:
-            print(f"RUN pkg install -y {container['pkg']} && pkg clean -a -y && rm -rf /var/db/pkg/repos")
+            print(f"RUN pkg install -y {container['pkg']} && pkg clean -a -y && rm -rf /var/db/pkg/repos", file=cf)
         else:
             urls, binary = container['tarball'].split('#')
             container['entrypoint'] = f"/usr/local/bin/{binary}"

@@ -8,6 +8,7 @@ on:
         default: all
         options:
           - all
+          - caddy
           - grafana
           - openldap
           - qbittorrent
@@ -21,21 +22,23 @@ jobs:
     strategy:
       matrix:
         container:
+          - name: caddy
+            tarball: https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_freebsd_{arch}.tar.gz#caddy
           - name: grafana
-            packages: grafana
+            pkg: grafana
             user: grafana:grafana
             entrypoint: /usr/local/bin/grafana
           - name: openldap
-            packages: FreeBSD-libsqlite3 openldap26-server
+            pkg: FreeBSD-libsqlite3 openldap26-server
             entrypoint: /usr/local/libexec/slapd
           - name: qbittorrent
             base: freebsd:small
-            platforms: freebsd/amd64
-            packages: qbittorrent-nox
+            arch: amd64
+            pkg: qbittorrent-nox
             user: qbittorrent:qbittorrent
             entrypoint: /usr/local/bin/qbittorrent-nox
           - name: redis
-            packages: redis
+            pkg: redis
             entrypoint: /usr/local/bin/redis-server
     name: ${{ matrix.container.name }}
     uses: ./.github/workflows/build.yaml

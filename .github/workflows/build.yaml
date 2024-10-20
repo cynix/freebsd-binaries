@@ -15,10 +15,17 @@ permissions:
 
 jobs:
   build:
+    if: ${{ inputs.build == 'all' || fromJSON(inputs.container).name == inputs.build }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate
+        run: |
+          ./generate.py '${{ inputs.container }}'
+
       - name: Build
-        if: ${{ inputs.build == 'all' || fromJSON(inputs.container).name == inputs.build }}
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -38,21 +45,4 @@ jobs:
             podman login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
 
           run: |
-            rm -f Containerfile
-
-            NAME=${{ fromJSON(inputs.container).name }}
-            BASE=${{ fromJSON(inputs.container).base }}
-            : ${BASE=freebsd:minimal}
-            PLATFORMS=${{ fromJSON(inputs.container).platforms }}
-            : ${PLATFORMS=freebsd/amd64,freebsd/arm64}
-
-            echo "FROM ghcr.io/cynix/$BASE" >> Containerfile
-            echo 'RUN pkg install -y ${{ fromJSON(inputs.container).packages }} && pkg clean -a -y && rm -rf /var/db/pkg/repos/*' >> Containerfile
-            if [ -n "${{ fromJSON(inputs.container).user }}" ]; then
-              echo 'USER ${{ fromJSON(inputs.container).user }}' >> Containerfile
-            fi
-            echo 'ENTRYPOINT ["${{ fromJSON(inputs.container).entrypoint }}"]' >> Containerfile
-            cat Containerfile
-
-            podman build --manifest=ghcr.io/cynix/$NAME:latest --network=host --platform=$PLATFORMS --pull=always .
-            podman manifest push ghcr.io/cynix/$NAME:latest
+            ./build.sh

@@ -2,7 +2,7 @@
 
 export SUPPORT_PATH="$1"
 
-if [ -z "$SUPPORT_PATH" -o ! -d "$SUPPORT_PATH"]; then
+if [ -z "$SUPPORT_PATH" -o ! -d "$SUPPORT_PATH" ]; then
   echo "Missing Plex Media Player support path" >&2
   exit 1
 fi

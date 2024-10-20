@@ -40,7 +40,7 @@ def main(name: str, config: dict[str, Any]) -> None:
                     RUN pw useradd -n {user} -u {uid} -g {user} -d /nonexistent -s /sbin/nologin
                     """), file=cf)
 
-                copy['!/etc/'].extend(['group', 'passwd', 'pwd.db', 'spwd.db'])
+                copy['!/etc/'].extend(['group', 'master.passwd', 'passwd', 'pwd.db', 'spwd.db'])
 
         print(f"FROM ghcr.io/cynix/{base}", file=cf)
 

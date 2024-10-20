@@ -17,6 +17,7 @@ openldap:
 plex:
   arch: amd64
   pkg:
+    - FreeBSD-locales
     - plexmediaserver
   user: plex
   entrypoint: /usr/local/bin/entrypoint.sh

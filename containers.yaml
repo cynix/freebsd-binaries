@@ -18,6 +18,7 @@ plex:
   arch: amd64
   pkg:
     - plexmediaserver
+  user: plex
   entrypoint: /usr/local/bin/entrypoint.sh
 
 qbittorrent:

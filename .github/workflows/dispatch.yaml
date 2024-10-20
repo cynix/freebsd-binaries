@@ -13,6 +13,7 @@ on:
           - openldap
           - qbittorrent
           - redis
+          - resilio
 
 permissions:
   packages: write
@@ -40,6 +41,11 @@ jobs:
           - name: redis
             pkg: redis
             entrypoint: /usr/local/bin/redis-server
+          - name: resilio
+            base: freebsd:base
+            arch: amd64
+            tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync
+            user: '851:851'
     name: ${{ matrix.container.name }}
     uses: ./.github/workflows/build.yaml
     with:

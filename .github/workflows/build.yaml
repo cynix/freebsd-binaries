@@ -6,7 +6,7 @@ on:
       container:
         type: string
         required: true
-      build:
+      enabled:
         type: string
         required: true
 
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    if: ${{ inputs.build == 'all' || fromJSON(inputs.container).name == inputs.build }}
+    if: ${{ fromJSON(inputs.enabled)[inputs.container] }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,6 +23,7 @@ jobs:
 
       - name: Generate
         run: |
+          python3 -mpip install pyyaml
           ./generate.py '${{ inputs.container }}'
 
       - name: Build

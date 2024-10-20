@@ -3,17 +3,34 @@ name: Dispatch
 on:
   workflow_dispatch:
     inputs:
-      build:
-        type: choice
-        default: all
-        options:
-          - all
-          - caddy
-          - grafana
-          - openldap
-          - qbittorrent
-          - redis
-          - resilio
+      caddy:
+        type: boolean
+        required: true
+        default: false
+      grafana:
+        type: boolean
+        required: true
+        default: false
+      openldap:
+        type: boolean
+        required: true
+        default: false
+      plex:
+        type: boolean
+        required: true
+        default: false
+      qbittorrent:
+        type: boolean
+        required: true
+        default: false
+      redis:
+        type: boolean
+        required: true
+        default: false
+      resilio:
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   packages: write
@@ -23,32 +40,15 @@ jobs:
     strategy:
       matrix:
         container:
-          - name: caddy
-            tarball: https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_freebsd_{arch}.tar.gz#caddy
-          - name: grafana
-            pkg: grafana
-            user: grafana:grafana
-            entrypoint: /usr/local/bin/grafana
-          - name: openldap
-            pkg: FreeBSD-libsqlite3 openldap26-server
-            entrypoint: /usr/local/libexec/slapd
-          - name: qbittorrent
-            base: freebsd:small
-            arch: amd64
-            pkg: qbittorrent-nox
-            user: qbittorrent:qbittorrent
-            entrypoint: /usr/local/bin/qbittorrent-nox
-          - name: redis
-            pkg: redis
-            user: redis:redis
-            entrypoint: /usr/local/bin/redis-server
-          - name: resilio
-            base: freebsd:base
-            arch: amd64
-            tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync
-            user: '851:851'
-    name: ${{ matrix.container.name }}
+          - caddy
+          - grafana
+          - openldap
+          - plex
+          - qbittorrent
+          - redis
+          - resilio
+    name: ${{ matrix.container }}
     uses: ./.github/workflows/build.yaml
     with:
-      container: ${{ toJSON(matrix.container) }}
-      build: ${{ inputs.build }}
+      container: ${{ matrix.container }}
+      enabled: ${{ toJSON(inputs) }}

@@ -1,25 +1,58 @@
 #!/usr/bin/env python3
 
-import json
 import os
 import shutil
 import subprocess
 import sys
 import tarfile
+import yaml
+from collections import defaultdict
+from textwrap import dedent
+from typing import Any
 
 
-def main(container: dict[str, str]) -> None:
-    arch = container.get('arch', 'amd64 arm64').split(' ')
+def main(name: str, config: dict[str, Any]) -> None:
+    arch = config.get('arch', 'amd64 arm64').split(' ')
 
     with open('Containerfile', 'w') as cf:
-        base = container.get('base', 'freebsd:minimal' if 'pkg' in container else 'freebsd:static')
+        base = config.get('base', 'freebsd:minimal' if 'pkg' in config else 'freebsd:static')
+        copy = defaultdict(list)
+
+        for d, _, f in os.walk(name):
+            if not f:
+                continue
+
+            if not d.endswith('/'):
+                d += '/'
+
+            if not d.startswith(f"{name}/"):
+                continue
+
+            copy[d[len(name):]].extend(f)
+
+        if user := config.get('user'):
+            if '=' in user:
+                user, uid = user.split('=')
+
+                print(dedent(f"""\
+                    FROM ghcr.io/cynix/freebsd:minimal AS builder
+                    RUN pw groupadd -n {user} -g {uid}
+                    RUN pw useradd -n {user} -u {uid} -g {user} -d /nonexistent -s /sbin/nologin
+                    """), file=cf)
+
+                copy['!/etc/'].extend(['group', 'passwd', 'pwd.db', 'spwd.db'])
+
         print(f"FROM ghcr.io/cynix/{base}", file=cf)
 
-        if 'pkg' in container:
-            print(f"RUN pkg install -y {container['pkg']} && pkg clean -a -y && rm -rf /var/db/pkg/repos", file=cf)
+        if pkg := config.get('pkg'):
+            print(f"RUN pkg install -y {' '.join(pkg)} && pkg clean -a -y && rm -rf /var/db/pkg/repos", file=cf)
+
+            if 'entrypoint' not in config:
+                config['entrypoint'] = f"/usr/local/bin/{pkg[0]}"
+
         else:
-            urls, binary = container['tarball'].split('#')
-            container['entrypoint'] = f"/usr/local/bin/{binary}"
+            urls, binary = config['tarball'].split('#')
+            config['entrypoint'] = f"/usr/local/bin/{binary}"
 
             for a in arch:
                 os.makedirs(f"bin/{a}")
@@ -48,13 +81,29 @@ def main(container: dict[str, str]) -> None:
             print('ARG TARGETARCH', file=cf)
             print(f"COPY bin/${{TARGETARCH}}/{binary} /usr/local/bin/{binary}", file=cf)
 
-        if 'user' in container:
-            print(f"USER {container['user']}", file=cf)
+        for dst, files in copy.items():
+            if not files:
+                continue
 
-        print(f"ENTRYPOINT [\"{container['entrypoint']}\"]", file=cf)
+            if dst.startswith('!'):
+                cmd = 'COPY --from=builder'
+                dst = dst[1:]
+                src = ' '.join([f"{dst}{x}" for x in files])
+            else:
+                cmd = 'COPY'
+                src = ' '.join([f"{name}{dst}{x}" for x in files])
+
+            print(f"{cmd} {src} {dst}", file=cf)
+
+        if user:
+            print(f"USER {user}:{user}", file=cf)
+
+        for env, value in config.get('env', {}):
+            print(f"ENV {env}={value}", file=cf)
+
+        print(f"ENTRYPOINT [\"{config['entrypoint']}\"]", file=cf)
 
     with open('build.sh', 'w') as sh:
-        name = container['name']
         platform = ','.join([f"freebsd/{x}" for x in arch])
         print(f"podman build --manifest=ghcr.io/cynix/{name}:latest --network=host --platform={platform} --pull=always .", file=sh)
         print(f"podman manifest push ghcr.io/cynix/{name}:latest", file=sh)
@@ -63,4 +112,7 @@ def main(container: dict[str, str]) -> None:
 
 
 if __name__ == "__main__":
-    main(json.loads(sys.argv[1]))
+    name = sys.argv[1]
+
+    with open('containers.yaml') as y:
+        main(name, yaml.safe_load(y)[name])

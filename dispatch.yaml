@@ -1,0 +1,19 @@
+name: Dispatch
+
+'on':
+  workflow_dispatch:
+    inputs: {}
+
+permissions:
+  packages: write
+
+jobs:
+  dispatch:
+    strategy:
+      matrix:
+        container: []
+    name: ${{ matrix.container }}
+    uses: ./.github/workflows/build.yaml
+    with:
+      container: ${{ matrix.container }}
+      enabled: ${{ toJSON(inputs) }}

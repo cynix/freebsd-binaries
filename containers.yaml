@@ -15,7 +15,8 @@ openldap:
   entrypoint: /usr/local/libexec/slapd
 
 plex:
-  arch: amd64
+  arch:
+    - amd64
   pkg:
     - FreeBSD-locales
     - plexmediaserver
@@ -24,7 +25,8 @@ plex:
 
 qbittorrent:
   base: freebsd:small
-  arch: amd64
+  arch:
+    - amd64
   pkg:
     - qbittorrent-nox
   user: qbittorrent
@@ -37,6 +39,7 @@ redis:
 
 resilio:
   base: freebsd:base
-  arch: amd64
+  arch:
+    - amd64
   tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync
   user: resilio=851

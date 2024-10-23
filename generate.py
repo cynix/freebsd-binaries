@@ -105,8 +105,8 @@ def main(name: str, config: dict[str, Any]) -> None:
 
     with open('build.sh', 'w') as sh:
         platform = ','.join([f"freebsd/{x}" for x in arch])
-        print(f"podman build --manifest=ghcr.io/cynix/{name}:latest --network=host --platform={platform} --pull=always .", file=sh)
-        print(f"podman manifest push ghcr.io/cynix/{name}:latest", file=sh)
+        print(f"buildah build --manifest=ghcr.io/cynix/{name}:latest --network=host --platform={platform} --pull=always .", file=sh)
+        print(f"buildah manifest push --all ghcr.io/cynix/{name}:latest", file=sh)
 
     os.chmod('build.sh', 0o755)
 

@@ -43,7 +43,7 @@ jobs:
 
             sed -i '' -e 's/zfs/vfs/g' /usr/local/etc/containers/storage.conf
             mkdir -p /var/db/containers/storage
-            podman login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
+            buildah login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
 
           run: |
             ./build.sh

@@ -51,4 +51,4 @@ jobs:
     uses: ./.github/workflows/build.yaml
     with:
       container: ${{ matrix.container }}
-      enabled: ${{ toJSON(inputs) }}
+      enabled: ${{ inputs[matrix.container] }}

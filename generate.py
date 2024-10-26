@@ -95,11 +95,11 @@ def main(name: str, config: dict[str, Any]) -> None:
 
             print(f"{cmd} {src} {dst}", file=cf)
 
+        for k, v in config.get('env', {}).items():
+            print(f"ENV {k}=\"{v}\"", file=cf)
+
         if user:
             print(f"USER {user}:{user}", file=cf)
-
-        for env, value in config.get('env', {}):
-            print(f"ENV {env}={value}", file=cf)
 
         print(f"ENTRYPOINT [\"{config['entrypoint']}\"]", file=cf)
 

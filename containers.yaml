@@ -20,8 +20,23 @@ plex:
   pkg:
     - FreeBSD-locales
     - plexmediaserver
+  env:
+    LANG: en_US.UTF-8
+    LC_ALL: en_US.UTF-8
+    LD_LIBRARY_PATH: /usr/local/share/plexmediaserver/lib
+    PATH: /usr/local/share/plexmediaserver/Resources/Python/bin:$PATH
+    PYTHONHOME: /usr/local/share/plexmediaserver/Resources/Python
+    PLEX_MEDIA_SERVER_INFO_VENDOR: FreeBSD
+    PLEX_MEDIA_SERVER_INFO_DEVICE: NAS
+    PLEX_MEDIA_SERVER_INFO_MODEL: Podman
+    PLEX_MEDIA_SERVER_INFO_PLATFORM_VERSION: 14
+    PLEX_MEDIA_SERVER_HOME: /usr/local/share/plexmediaserver
+    PLEX_MEDIA_SERVER_APPLICATION_SUPPORT_DIR: /plex
+    PLEX_MEDIA_SERVER_LOG_DIR: /plex/Plex Media Server/Logs
+    PLEX_MEDIA_SERVER_MAX_PLUGIN_PROCS: 6
+    PLEX_MEDIA_SERVER_PIDFILE: /tmp/plex.pid
   user: plex
-  entrypoint: /usr/local/bin/entrypoint.sh
+  entrypoint: /usr/local/share/plexmediaserver/Plex_Media_Server
 
 qbittorrent:
   base: freebsd:small

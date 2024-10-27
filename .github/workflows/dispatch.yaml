@@ -31,6 +31,10 @@ on:
         type: boolean
         required: true
         default: false
+      step-ca:
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   packages: write
@@ -47,6 +51,7 @@ jobs:
           - qbittorrent
           - redis
           - resilio
+          - step-ca
     name: ${{ matrix.container }}
     uses: ./.github/workflows/build.yaml
     with:

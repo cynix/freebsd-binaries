@@ -58,3 +58,10 @@ resilio:
     - amd64
   tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync
   user: resilio=851
+
+step-ca:
+  pkg:
+    - pcsc-lite
+    - step-certificates
+  user: step
+  entrypoint: /usr/local/sbin/step-ca

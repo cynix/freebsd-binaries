@@ -31,6 +31,10 @@ on:
         type: boolean
         required: true
         default: false
+      snixy:
+        type: boolean
+        required: true
+        default: false
       step-ca:
         type: boolean
         required: true
@@ -51,6 +55,7 @@ jobs:
           - qbittorrent
           - redis
           - resilio
+          - snixy
           - step-ca
     name: ${{ matrix.container }}
     uses: ./.github/workflows/build.yaml

@@ -52,6 +52,7 @@ jobs:
           - resilio
           - snixy
           - step-ca
+      fail-fast: false
     name: ${{ matrix.container }}
     uses: ./.github/workflows/build.yaml
     with:

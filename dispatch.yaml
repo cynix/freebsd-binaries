@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         container: []
+      fail-fast: false
     name: ${{ matrix.container }}
     uses: ./.github/workflows/build.yaml
     with:

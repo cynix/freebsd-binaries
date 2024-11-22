@@ -3,11 +3,6 @@ caddy:
   tarball: https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_freebsd_{arch}.tar.gz#caddy
   user: www
 
-grafana:
-  pkg:
-    - grafana
-  user: grafana
-
 openldap:
   pkg:
     - FreeBSD-libsqlite3

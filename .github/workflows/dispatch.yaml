@@ -7,10 +7,6 @@ on:
         type: boolean
         required: true
         default: false
-      grafana:
-        type: boolean
-        required: true
-        default: false
       openldap:
         type: boolean
         required: true
@@ -49,7 +45,6 @@ jobs:
       matrix:
         container:
           - caddy
-          - grafana
           - openldap
           - plex
           - qbittorrent

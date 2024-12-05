@@ -34,11 +34,11 @@ plex:
   entrypoint: /usr/local/share/plexmediaserver/Plex_Media_Server
 
 qbittorrent:
-  base: freebsd:small
   arch:
     - amd64
   pkg:
     - qbittorrent-nox
+    - FreeBSD-utilities
   user: qbittorrent
 
 redis:
@@ -48,7 +48,7 @@ redis:
   entrypoint: /usr/local/bin/redis-server
 
 resilio:
-  base: freebsd:base
+  base: freebsd:dynamic
   arch:
     - amd64
   tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync

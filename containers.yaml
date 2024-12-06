@@ -5,16 +5,16 @@ caddy:
 
 openldap:
   pkg:
-    - FreeBSD-libsqlite3
     - openldap26-server
+    - FreeBSD-libsqlite3
   entrypoint: /usr/local/libexec/slapd
 
 plex:
   arch:
     - amd64
   pkg:
-    - FreeBSD-locales
     - plexmediaserver
+    - FreeBSD-locales
   env:
     LANG: en_US.UTF-8
     LC_ALL: en_US.UTF-8
@@ -60,7 +60,7 @@ snixy:
 
 step-ca:
   pkg:
-    - pcsc-lite
     - step-certificates
+    - pcsc-lite
   user: step
   entrypoint: /usr/local/sbin/step-ca

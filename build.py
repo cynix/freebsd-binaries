@@ -27,7 +27,7 @@ def pw(m: Path, *args: str):
     subprocess.check_call(['pw', '-R', m] + list(args))
 
 
-def pkg(version, arch: str, m: Path, cmd: str, *args: str):
+def pkg(version, arch: str, m: Path, cmd: str, *args: str, text: bool = False) -> str:
     major, minor, *_ = version.split('p')[0].split('.')
 
     with open('/usr/local/etc/pkg/repos/FreeBSD-base.conf', 'w') as f:
@@ -48,7 +48,11 @@ def pkg(version, arch: str, m: Path, cmd: str, *args: str):
         ABI=f"FreeBSD:{major}:{'aarch64' if arch == 'arm64' else arch}",
     )
 
-    subprocess.check_call(['pkg', '--rootdir', m, cmd, '-y'] + list(args), env=env)
+    if text:
+        return subprocess.check_output(['pkg', '--rootdir', m, cmd] + list(args), env=env, text=True).strip()
+    else:
+        subprocess.check_call(['pkg', '--rootdir', m, cmd, '-y'] + list(args), env=env)
+        return ''
 
 
 @contextmanager
@@ -91,6 +95,7 @@ def main(name: str, config: dict[str, Any]) -> None:
 
             if pkgs := config.get('pkg'):
                 pkg(version, arch, m, 'install', *pkgs)
+                buildah('config', f"--annotation=org.freebsd.pkg.{pkgs[0]}.version={pkg(version, arch, m, 'query', '%v', pkgs[0], text=True)}", c)
                 shutil.rmtree(m / 'var/db/pkg/repos')
 
                 hints = set(['/lib', '/usr/lib', '/usr/local/lib'])
@@ -133,6 +138,8 @@ def main(name: str, config: dict[str, Any]) -> None:
                             break
                     else:
                         raise RuntimeError(f"{binary} not found in {url}")
+
+                buildah('config', f"--annotation=org.freebsd.bin.{binary}.url={url}", c)
 
             cmd = ['config', f"--entrypoint=[\"{config['entrypoint']}\"]"] + [f"--env={k}={v}" for k, v in config.get('env', {}).items()]
 

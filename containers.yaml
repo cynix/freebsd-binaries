@@ -48,7 +48,7 @@ redis:
   entrypoint: /usr/local/bin/redis-server
 
 resilio:
-  base: freebsd:dynamic
+  base: freebsd:minimal
   arch:
     - amd64
   tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync

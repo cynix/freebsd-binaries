@@ -5,9 +5,11 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import yaml
 from contextlib import contextmanager
+from fnmatch import fnmatch
+from github import Github
 from pathlib import Path
+from ruamel.yaml import YAML
 from textwrap import dedent
 from typing import Any
 
@@ -114,10 +116,26 @@ def main(name: str, config: dict[str, Any]) -> None:
                 elif config['entrypoint'].startswith('/usr/local/sbin/'):
                     os.chmod(m / 'usr/local/sbin', 0o711)
             else:
-                urls, binary = config['tarball'].split('#')
+                if repo := config.get('repo'):
+                    binary = config.get('binary', repo.split('/')[1])
+                    glob = config['glob'].format(arch=arch)
+
+                    release = Github().get_repo(repo).get_latest_release()
+                    tag = release.tag_name
+
+                    for asset in release.get_assets():
+                        if fnmatch(asset.browser_download_url, glob):
+                            url = asset.browser_download_url
+                            break
+                    else:
+                        raise RuntimeError(f"{glob} not found in {release.assets}")
+                else:
+                    urls, binary = config['tarball'].split('#')
+                    url = urls.format(arch=arch)
+                    tag = None
+
                 config['entrypoint'] = f"/usr/local/bin/{binary}"
 
-                url = urls.format(arch=arch)
                 subprocess.check_call(['fetch', '-o', '/tmp/tarball', url])
 
                 with tarfile.open('/tmp/tarball') as tarball:
@@ -141,6 +159,9 @@ def main(name: str, config: dict[str, Any]) -> None:
 
                 buildah('config', f"--annotation=org.freebsd.bin.{binary}.url={url}", c)
 
+                if tag:
+                    buildah('config', f"--annotation=org.freebsd.bin.{binary}.version={tag}", c)
+
             cmd = ['config', f"--entrypoint=[\"{config['entrypoint']}\"]"] + [f"--env={k}={v}" for k, v in config.get('env', {}).items()]
 
             if user:
@@ -155,4 +176,4 @@ if __name__ == "__main__":
     name = sys.argv[1]
 
     with open('containers.yaml') as y:
-        main(name, yaml.safe_load(y)[name])
+        main(name, YAML().load(y)[name])

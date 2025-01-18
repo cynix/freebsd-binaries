@@ -1,6 +1,7 @@
 ---
 caddy:
-  tarball: https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_freebsd_{arch}.tar.gz#caddy
+  repo: caddyserver/caddy
+  glob: '*_freebsd_{arch}.tar.gz'
   user: www
 
 openldap:
@@ -55,7 +56,8 @@ resilio:
   user: resilio=851
 
 snixy:
-  tarball: https://github.com/cynix/snixy/releases/download/v0.1.0/snixy-v0.1.0-freebsd_{arch}.tar.gz#snixy
+  repo: cynix/snixy
+  glob: '*-freebsd_{arch}.tar.gz'
   user: snixy=940 # _tcpproxy
 
 step-ca:

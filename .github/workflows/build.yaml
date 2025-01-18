@@ -44,4 +44,4 @@ jobs:
 
           run: |
             set -ex
-            uv run --with=pyyaml ./build.py '${{ inputs.container }}'
+            uv run --no-build --with=pygithub --with=ruamel-yaml ./build.py '${{ inputs.container }}'

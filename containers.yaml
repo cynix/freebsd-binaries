@@ -1,4 +1,10 @@
 ---
+amule:
+  pkg:
+    - amule
+  user: amule=852
+  entrypoint: /usr/local/bin/amuled
+
 caddy:
   repo: caddyserver/caddy
   glob: '*_freebsd_{arch}.tar.gz'

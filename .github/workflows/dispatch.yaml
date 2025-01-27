@@ -3,6 +3,10 @@ name: Dispatch
 on:
   workflow_dispatch:
     inputs:
+      amule:
+        type: boolean
+        required: true
+        default: false
       caddy:
         type: boolean
         required: true
@@ -44,6 +48,7 @@ jobs:
     strategy:
       matrix:
         container:
+          - amule
           - caddy
           - openldap
           - plex

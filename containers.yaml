@@ -6,8 +6,9 @@ amule:
   entrypoint: /usr/local/bin/amuled
 
 caddy:
-  repo: caddyserver/caddy
-  glob: '*_freebsd_{arch}.tar.gz'
+  tarball:
+    - repo: caddyserver/caddy
+      glob: '*_freebsd_{arch}.tar.gz'
   user: www
 
 openldap:
@@ -17,8 +18,7 @@ openldap:
   entrypoint: /usr/local/libexec/slapd
 
 plex:
-  arch:
-    - amd64
+  arch: [amd64]
   pkg:
     - plexmediaserver
     - FreeBSD-locales
@@ -41,8 +41,7 @@ plex:
   entrypoint: /usr/local/share/plexmediaserver/Plex_Media_Server
 
 qbittorrent:
-  arch:
-    - amd64
+  arch: [amd64]
   pkg:
     - qbittorrent-nox
     - FreeBSD-utilities
@@ -56,14 +55,35 @@ redis:
 
 resilio:
   base: freebsd:minimal
-  arch:
-    - amd64
-  tarball: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync
+  arch: [amd64]
+  tarball:
+    - url: https://download-cdn.resilio.com/2.8.1.1390/freebsd/x64/0/resilio-sync_freebsd_x64.tar.gz#rslsync
   user: resilio=851
 
+samba-ldap:
+  base: freebsd:minimal
+  arch: [amd64]
+  pkg:
+    - samba419
+    - FreeBSD-openssl
+    - FreeBSD-utilities
+    - nss-pam-ldapd
+  tarball:
+    - url: https://github.com/cynix/groundcontrol/releases/download/edge/groundcontrol-{triple}.tar.gz#groundcontrol
+  script: |
+    mkdir -m711 {root}/var/run/config
+    ln -sf /var/run/config/ldap.conf {root}/usr/local/etc/openldap/ldap.conf
+    ln -sf /var/run/config/nslcd.conf {root}/usr/local/etc/nslcd.conf
+    mv {root}/etc/ssl {root}/var/run/
+    ln -sf /var/run/ssl {root}/etc/ssl
+    rmdir {root}/var/log/samba4
+    ln -sf /tmp/samba4 {root}/var/log/samba4
+  entrypoint: [/usr/local/bin/groundcontrol, /usr/local/etc/groundcontrol.toml]
+
 snixy:
-  repo: cynix/snixy
-  glob: '*-freebsd_{arch}.tar.gz'
+  tarball:
+    - repo: cynix/snixy
+      glob: '*-freebsd_{arch}.tar.gz'
   user: snixy=940 # _tcpproxy
 
 step-ca:

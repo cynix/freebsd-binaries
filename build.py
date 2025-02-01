@@ -85,8 +85,10 @@ def main(name: str, config: dict[str, Any]) -> None:
     version = subprocess.check_output(['podman', 'image', 'inspect', '--format={{index .Annotations "org.freebsd.version"}}', image], text=True).strip()
 
     for arch in config.get('arch', ['amd64', 'arm64']):
+        triple = f"{arch.replace('amd64', 'x86_64').replace('arm64', 'aarch64')}-unknown-freebsd"
+
         with container(manifest, base, arch) as (c, m):
-            if os.path.exists(name):
+            if os.path.isdir(name):
                 shutil.copytree(name, m, symlinks=True, dirs_exist_ok=True)
 
             if user := config.get('user'):
@@ -97,7 +99,10 @@ def main(name: str, config: dict[str, Any]) -> None:
 
             if pkgs := config.get('pkg'):
                 pkg(version, arch, m, 'install', *pkgs)
-                buildah('config', f"--annotation=org.freebsd.pkg.{pkgs[0]}.version={pkg(version, arch, m, 'query', '%v', pkgs[0], text=True)}", c)
+
+                for p in pkgs:
+                    buildah('config', f"--annotation=org.freebsd.pkg.{p}.version={pkg(version, arch, m, 'query', '%v', p, text=True)}", c)
+
                 shutil.rmtree(m / 'var/db/pkg/repos')
 
                 hints = set(['/lib', '/usr/lib', '/usr/local/lib'])
@@ -113,12 +118,11 @@ def main(name: str, config: dict[str, Any]) -> None:
 
                 if 'entrypoint' not in config:
                     config['entrypoint'] = f"/usr/local/bin/{pkgs[0]}"
-                elif config['entrypoint'].startswith('/usr/local/sbin/'):
-                    os.chmod(m / 'usr/local/sbin', 0o711)
-            else:
-                if repo := config.get('repo'):
-                    binary = config.get('binary', repo.split('/')[1])
-                    glob = config['glob'].format(arch=arch)
+
+            for tarball in config.get('tarball', []):
+                if repo := tarball.get('repo'):
+                    binary = tarball.get('binary', repo.split('/')[1])
+                    glob = tarball['glob'].format(arch=arch, triple=triple)
 
                     release = Github().get_repo(repo).get_latest_release()
                     tag = release.tag_name
@@ -130,16 +134,17 @@ def main(name: str, config: dict[str, Any]) -> None:
                     else:
                         raise RuntimeError(f"{glob} not found in {release.assets}")
                 else:
-                    urls, binary = config['tarball'].split('#')
-                    url = urls.format(arch=arch)
+                    urls, binary = tarball['url'].split('#')
+                    url = urls.format(arch=arch, triple=triple)
                     tag = None
 
-                config['entrypoint'] = f"/usr/local/bin/{binary}"
+                if 'entrypoint' not in config:
+                    config['entrypoint'] = f"/usr/local/bin/{binary}"
 
                 subprocess.check_call(['fetch', '-o', '/tmp/tarball', url])
 
-                with tarfile.open('/tmp/tarball') as tarball:
-                    while member := tarball.next():
+                with tarfile.open('/tmp/tarball') as t:
+                    while member := t.next():
                         if not member.isfile() or (member.mode & 0o111) != 0o111:
                             continue
 
@@ -148,7 +153,7 @@ def main(name: str, config: dict[str, Any]) -> None:
                             os.makedirs(bin.parent, 0o755, exist_ok=True)
 
                             with open(bin, "wb") as dst:
-                                src = tarball.extractfile(member)
+                                src = t.extractfile(member)
                                 assert src
                                 shutil.copyfileobj(src, dst)
 
@@ -162,7 +167,17 @@ def main(name: str, config: dict[str, Any]) -> None:
                 if tag:
                     buildah('config', f"--annotation=org.freebsd.bin.{binary}.version={tag}", c)
 
-            cmd = ['config', f"--entrypoint=[\"{config['entrypoint']}\"]"] + [f"--env={k}={v}" for k, v in config.get('env', {}).items()]
+            if (m / 'usr/local/sbin').is_dir():
+                os.chmod(m / 'usr/local/sbin', 0o711)
+
+            if script := config.get('script'):
+                subprocess.run(['sh', '-e'], check=True, input=script.format(root=m), text=True)
+
+            if isinstance(config['entrypoint'], str):
+                config['entrypoint'] = [config['entrypoint']]
+
+            entrypoint = ','.join(f'"{x}"' for x in config['entrypoint'])
+            cmd = ['config', f"--entrypoint=[{entrypoint}]"] + [f"--env={k}={v}" for k, v in config.get('env', {}).items()]
 
             if user:
                 cmd.append(f"--user={user}:{user}")

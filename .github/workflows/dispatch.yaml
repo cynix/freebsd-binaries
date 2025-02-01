@@ -31,6 +31,10 @@ on:
         type: boolean
         required: true
         default: false
+      samba-ldap:
+        type: boolean
+        required: true
+        default: false
       snixy:
         type: boolean
         required: true
@@ -55,6 +59,7 @@ jobs:
           - qbittorrent
           - redis
           - resilio
+          - samba-ldap
           - snixy
           - step-ca
       fail-fast: false

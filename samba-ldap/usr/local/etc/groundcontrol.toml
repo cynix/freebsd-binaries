@@ -1,0 +1,21 @@
+[[processes]]
+name = "generate"
+pre = [ "/templates/generate.sh" ]
+
+[[processes]]
+name = "rehash"
+pre = [ "certctl", "rehash" ]
+
+[[processes]]
+name = "nslcd"
+pre = ["sh", "-c", "touch /var/run/nslcd.pid && chown nslcd:nslcd /var/run/nslcd.pid && mkdir -m711 /var/run/nslcd && chown nslcd:nslcd /var/run/nslcd && chown nslcd:nslcd /var/run/config/nslcd.conf"]
+run = { user = "nslcd", only-env = [], command = ["/usr/local/sbin/nslcd", "--nofork"] }
+
+[[processes]]
+name = "nscd"
+run = ["/usr/sbin/nscd", "-n"]
+
+[[processes]]
+name = "smbd"
+pre = ["sh", "-c", "mkdir -m755 -p /var/run/samba4/locks && mkdir -m700 /tmp/samba4 && /usr/local/bin/testparm --verbose /var/run/config/smb4.conf"]
+run = { only-env = [], command = ["/usr/local/sbin/smbd", "--configfile=/var/run/config/smb4.conf", "--debug-stdout", "--debuglevel=0", "--foreground", "--no-process-group"] }

@@ -75,8 +75,9 @@ def container(manifest: str, base: str, arch: str):
 
 
 def main(name: str, config: dict[str, Any]) -> None:
-    manifest = f"ghcr.io/cynix/{name}:latest"
-    buildah('manifest', 'create', manifest)
+    latest = f"ghcr.io/cynix/{name}:latest"
+    tagged = ''
+    buildah('manifest', 'create', latest)
 
     base = config.get('base', 'freebsd:minimal' if 'pkg' in config else 'freebsd:static')
 
@@ -87,7 +88,7 @@ def main(name: str, config: dict[str, Any]) -> None:
     for arch in config.get('arch', ['amd64', 'arm64']):
         triple = f"{arch.replace('amd64', 'x86_64').replace('arm64', 'aarch64')}-unknown-freebsd"
 
-        with container(manifest, base, arch) as (c, m):
+        with container(latest, base, arch) as (c, m):
             if os.path.isdir(name):
                 shutil.copytree(name, m, symlinks=True, dirs_exist_ok=True)
 
@@ -99,9 +100,11 @@ def main(name: str, config: dict[str, Any]) -> None:
 
             if pkgs := config.get('pkg'):
                 pkg(version, arch, m, 'install', *pkgs)
+                versions = {p: pkg(version, arch, m, 'query', '%v', p, text=True) for p in pkgs}
+                tagged = f"ghcr.io/cynix/{name}:{versions[pkgs[0]]}"
 
                 for p in pkgs:
-                    buildah('config', f"--annotation=org.freebsd.pkg.{p}.version={pkg(version, arch, m, 'query', '%v', p, text=True)}", c)
+                    buildah('config', f"--annotation=org.freebsd.pkg.{p}.version={versions[p]}", c)
 
                 shutil.rmtree(m / 'var/db/pkg/repos')
 
@@ -167,6 +170,9 @@ def main(name: str, config: dict[str, Any]) -> None:
                 if tag:
                     buildah('config', f"--annotation=org.freebsd.bin.{binary}.version={tag}", c)
 
+                    if not tagged:
+                        tagged = f"ghcr.io/cynix/{name}:{tag}"
+
             if (m / 'usr/local/sbin').is_dir():
                 os.chmod(m / 'usr/local/sbin', 0o711)
 
@@ -184,7 +190,10 @@ def main(name: str, config: dict[str, Any]) -> None:
 
             buildah(*cmd, c)
 
-    buildah('manifest', 'push', '--all', manifest, f"docker://{manifest}")
+    buildah('manifest', 'push', '--all', latest, f"docker://{latest}")
+
+    if tagged:
+        buildah('manifest', 'push', '--all', latest, f"docker://{tagged}")
 
 
 if __name__ == "__main__":

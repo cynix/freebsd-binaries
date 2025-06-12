@@ -79,7 +79,7 @@ def main(name: str, config: dict[str, Any]) -> None:
     tagged = ''
     buildah('manifest', 'create', latest)
 
-    base = config.get('base', 'freebsd:minimal' if 'pkg' in config else 'freebsd:static')
+    base = config.get('base', 'freebsd:runtime' if 'pkg' in config else 'freebsd:static')
 
     image = f"ghcr.io/cynix/{base}"
     subprocess.check_call(['podman', 'pull', image])

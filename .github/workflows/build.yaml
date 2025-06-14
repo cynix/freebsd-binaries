@@ -10,13 +10,12 @@ on:
         type: boolean
         required: true
 
-permissions:
-  packages: write
-
 jobs:
   build:
     if: ${{ inputs.enabled }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,3 +44,13 @@ jobs:
           run: |
             set -ex
             uv run --no-build --with=pygithub --with=ruamel-yaml ./build.py '${{ inputs.container }}'
+
+      - name: Cleanup
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          package: ${{ inputs.container }}
+          keep-n-tagged: 3
+          exclude-tags: latest
+          delete-untagged: true
+          delete-ghost-images: true
+          delete-partial-images: true

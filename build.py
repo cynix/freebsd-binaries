@@ -138,8 +138,8 @@ def main(name: str, config: dict[str, Any]) -> None:
                         raise RuntimeError(f"{glob} not found in {release.assets}")
                 else:
                     urls, binary = tarball['url'].split('#')
-                    url = urls.format(arch=arch, triple=triple)
-                    tag = None
+                    tag = tarball.get('version')
+                    url = urls.format(arch=arch, triple=triple, version=tag)
 
                 if 'entrypoint' not in config:
                     config['entrypoint'] = f"/usr/local/bin/{binary}"

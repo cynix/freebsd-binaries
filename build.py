@@ -183,7 +183,7 @@ def main(name: str, config: dict[str, Any]) -> None:
                 config['entrypoint'] = [config['entrypoint']]
 
             entrypoint = ','.join(f'"{x}"' for x in config['entrypoint'])
-            cmd = ['config', f"--entrypoint=[{entrypoint}]"] + [f"--env={k}={v}" for k, v in config.get('env', {}).items()]
+            cmd = ['config', f"--entrypoint=[{entrypoint}]", "--cmd="] + [f"--env={k}={v}" for k, v in config.get('env', {}).items()]
 
             if user:
                 cmd.append(f"--user={user}:{user}")

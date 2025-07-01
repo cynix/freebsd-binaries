@@ -16,7 +16,7 @@ for conf in ldap nslcd smb4; do
       /templates/$conf.conf > /var/run/config/$conf.conf
 
     if [ -d /config/$conf.d/ ]; then
-      for i in $(find /config/$conf.d/ -name '*.conf'); do
+      for i in $(find /config/$conf.d/ -name '*.conf' | sort); do
         echo >> /var/run/config/$conf.conf
         echo "# $i" >> /var/run/config/$conf.conf
         cat "$i" >> /var/run/config/$conf.conf

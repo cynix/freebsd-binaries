@@ -1,4 +1,4 @@
-name: Dispatch
+name: Dispatch amule/caddy/jdownloader/openldap/plex/qbittorrent/redis/resilio/samba-ldap/snixy
 
 on:
   workflow_dispatch:
@@ -8,6 +8,10 @@ on:
         required: true
         default: false
       caddy:
+        type: boolean
+        required: true
+        default: false
+      jdownloader:
         type: boolean
         required: true
         default: false
@@ -39,10 +43,6 @@ on:
         type: boolean
         required: true
         default: false
-      step-ca:
-        type: boolean
-        required: true
-        default: false
 
 permissions:
   packages: write
@@ -54,6 +54,7 @@ jobs:
         container:
           - amule
           - caddy
+          - jdownloader
           - openldap
           - plex
           - qbittorrent
@@ -61,7 +62,6 @@ jobs:
           - resilio
           - samba-ldap
           - snixy
-          - step-ca
       fail-fast: false
     name: ${{ matrix.container }}
     uses: ./.github/workflows/build.yaml

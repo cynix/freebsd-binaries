@@ -10,11 +10,14 @@ def main(containers: list[str]) -> None:
     with open('dispatch.yaml') as y:
         dispatch = yaml.load(y)
 
-    dispatch['on']['workflow_dispatch']['inputs'] = {x: {'type': 'boolean', 'required': True, 'default': False} for x in containers}
-    dispatch['jobs']['dispatch']['strategy']['matrix']['container'] = containers
+    for n in range((len(containers) // 10) + 1):
+        group = containers[10*n:10*(n+1)]
+        dispatch['name'] = f"Dispatch {'/'.join(group)}"
+        dispatch['on']['workflow_dispatch']['inputs'] = {x: {'type': 'boolean', 'required': True, 'default': False} for x in group}
+        dispatch['jobs']['dispatch']['strategy']['matrix']['container'] = group
 
-    with open('.github/workflows/dispatch.yaml', 'w') as f:
-        yaml.dump(dispatch, f)
+        with open(f".github/workflows/dispatch-{n}.yaml", 'w') as f:
+            yaml.dump(dispatch, f)
 
 
 if __name__ == "__main__":

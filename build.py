@@ -1,6 +1,8 @@
 #/usr/bin/env python3
 
 import os
+import re
+import requests
 import shutil
 import subprocess
 import sys
@@ -55,6 +57,23 @@ def pkg(version, arch: str, m: Path, cmd: str, *args: str, text: bool = False) -
     else:
         subprocess.check_call(['pkg', '--rootdir', m, cmd, '-y'] + list(args), env=env)
         return ''
+
+
+def get_version(version: str | dict[str, str] | None) -> str | None:
+    if not version:
+        return None
+
+    if isinstance(version, str):
+        return version
+
+    body = requests.get(version['url']).text
+    if 'regex' not in version:
+        return body
+
+    if m := re.search(version['regex'], body):
+        return m.group('version')
+
+    return None
 
 
 @contextmanager
@@ -138,7 +157,7 @@ def main(name: str, config: dict[str, Any]) -> None:
                         raise RuntimeError(f"{glob} not found in {release.assets}")
                 else:
                     urls, binary = tarball['url'].split('#')
-                    tag = tarball.get('version')
+                    tag = get_version(tarball.get('version'))
                     url = urls.format(arch=arch, triple=triple, version=tag)
 
                 if 'entrypoint' not in config:
@@ -169,9 +188,26 @@ def main(name: str, config: dict[str, Any]) -> None:
 
                 if tag:
                     buildah('config', f"--annotation=org.freebsd.bin.{binary}.version={tag}", c)
+                    tagged = f"ghcr.io/cynix/{name}:{tag}"
 
-                    if not tagged:
-                        tagged = f"ghcr.io/cynix/{name}:{tag}"
+            for file in config.get('file', []):
+                url = file['url']
+                filename = url.split('/')[-1]
+
+                with requests.get(url, stream=True) as r:
+                    r.raise_for_status()
+
+                    dst = m / f"usr/local/{name}" / filename
+                    os.makedirs(dst.parent, exist_ok=True)
+
+                    with open(dst, 'wb') as f:
+                        shutil.copyfileobj(r.raw, f)
+
+                buildah('config', f"--annotation=org.freebsd.file.{filename}.url={url}", c)
+
+                if tag := get_version(file.get('version')):
+                    buildah('config', f"--annotation=org.freebsd.file.{filename}.version={tag}", c)
+                    tagged = f"ghcr.io/cynix/{name}:{tag}"
 
             if (m / 'usr/local/sbin').is_dir():
                 os.chmod(m / 'usr/local/sbin', 0o711)

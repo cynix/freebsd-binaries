@@ -11,6 +11,20 @@ caddy:
       glob: '*_freebsd_{arch}.tar.gz'
   user: www
 
+jdownloader:
+  file:
+    - url: https://installer.jdownloader.org/JDownloader.jar
+      version:
+        url: https://svn.jdownloader.org/build.php
+        regex: 'Latest Revision:[^\d]+(?P<version>\d+)'
+  pkg:
+    - ca_root_nss
+    - openjdk21-jre
+  env:
+    JD_HOME: /jdownloader
+  user: jdownloader=10000
+  entrypoint: /entrypoint.sh
+
 openldap:
   pkg:
     - openldap26-server

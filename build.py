@@ -34,14 +34,20 @@ def pw(m: Path, *args: str):
 def pkg(version, arch: str, m: Path, cmd: str, *args: str, text: bool = False) -> str:
     major, minor, *_ = version.split('p')[0].split('.')
 
-    with open('/usr/local/etc/pkg/repos/FreeBSD-base.conf', 'w') as f:
+    with open('/usr/local/etc/pkg/repos/FreeBSD.conf', 'w') as f:
         print(dedent(f"""
+            FreeBSD: {{
+              url: "pkg+https://pkg.FreeBSD.org/${{ABI}}/latest"
+            }}
             FreeBSD-base: {{
               url: "pkg+https://pkg.FreeBSD.org/${{ABI}}/base_release_{minor}",
               mirror_type: "srv",
               signature_type: "fingerprints",
               fingerprints: "/usr/share/keys/pkg",
               enabled: yes
+            }}
+            FreeBSD-kmods: {{
+              enabled: no
             }}
             """), file=f)
 

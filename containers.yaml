@@ -12,6 +12,7 @@ caddy:
   user: www
 
 jdownloader:
+  arch: [amd64]
   file:
     - url: https://installer.jdownloader.org/JDownloader.jar
       version:

@@ -81,7 +81,7 @@ samba-ldap:
   base: freebsd:runtime
   arch: [amd64]
   pkg:
-    - samba419
+    - samba420
     - FreeBSD-openssl
     - FreeBSD-utilities
     - nss-pam-ldapd

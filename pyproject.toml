@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "builder"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "actions-python-core",
+  "actions-python-github[pygithub]",
+  "ruamel.yaml",
+]
+
+[project.scripts]
+matrix = "builder.matrix:matrix"
+build-go = "builder.go:build_go"
+build-container = "builder.container:build_container"
+
+[tool.hatch.build.targets.wheel]
+packages = ["builder"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP"]
+ignore = ["E501"]

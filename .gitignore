@@ -1,1 +1,3 @@
-/build.sh
+.ruff_cache/
+.venv/
+/src/

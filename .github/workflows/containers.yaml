@@ -1,0 +1,54 @@
+name: Containers
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        type: string
+        required: true
+      version:
+        type: string
+        required: false
+      containers:
+        type: string
+        required: true
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: ${{ fromJSON(inputs.containers) }}
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build
+        uses: acj/freebsd-firecracker-action@v0.6.0
+        with:
+          checkout: false
+          disk-size: 20G
+          pre-run: |
+            rsync --links --recursive --relative . firecracker:
+          run-in-vm: |
+            .github/scripts/setup-freebsd.sh container
+            buildah login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
+
+            env \
+              INPUT_PROJECT="${{ inputs.project }}" \
+              INPUT_VERSION="${{ inputs.version }}" \
+              INPUT_PACKAGE="${{ matrix.package }}" \
+              go125 run ./build container
+          post-run: ""
+
+      - name: Cleanup
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          package: ${{ matrix.container }}
+          keep-n-tagged: 3
+          exclude-tags: latest
+          delete-untagged: true
+          delete-ghost-images: true
+          delete-partial-images: true

@@ -1,0 +1,25 @@
+diff --git i/Cargo.toml w/Cargo.toml
+index ebe55958..f8950014 100644
+--- i/Cargo.toml
++++ w/Cargo.toml
+@@ -29,6 +29,7 @@ nix = { workspace = true }
+ suggest = { workspace = true }
+ thiserror = { workspace = true }
+ isahc = { workspace = true }
++value-bag = { version = "1.10.0" }
+ 
+ [dev-dependencies]
+ insta = { version = "1.6.0", features = ["backtrace"] }
+diff --git i/zellij-server/Cargo.toml w/zellij-server/Cargo.toml
+index b8d1c576..9400ee28 100644
+--- i/zellij-server/Cargo.toml
++++ w/zellij-server/Cargo.toml
+@@ -38,7 +38,7 @@ serde_json = { workspace = true }
+ signal-hook = { workspace = true }
+ sixel-image = { version = "0.1.0", default-features = false }
+ sixel-tokenizer = { version = "0.1.0", default-features = false }
+-sysinfo = { version = "0.22.5", default-features = false }
++sysinfo = { version = "0.22.5" }
+ tempfile = { workspace = true }
+ typetag = { version = "0.1.7", default-features = false }
+ unicode-width = { workspace = true }

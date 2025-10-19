@@ -1,0 +1,27 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "builder"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "actions-python-core",
+  "actions-python-github[githubkit]",
+  "packaging",
+  "ruamel.yaml",
+]
+
+[project.scripts]
+matrix = "builder.matrix:matrix"
+build-go = "builder.go:build_go"
+build-container = "builder.container:build_container"
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = "builder"

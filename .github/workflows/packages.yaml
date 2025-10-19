@@ -1,0 +1,141 @@
+name: Packages
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        type: string
+        required: true
+      version:
+        type: string
+        required: true
+      packages:
+        type: string
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.packages) }}
+    name: build (${{ matrix.package }})
+    steps:
+      - name: Free disk space
+        if: matrix.type == 'go' && matrix.cgo
+        uses: jlumbroso/free-disk-space@main
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Checkout ${{ matrix.repo }}
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          path: src
+
+      - name: Setup uv
+        if: matrix.type == 'go'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Setup go
+        if: matrix.type == 'go' && !matrix.cgo
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Setup goreleaser
+        if: matrix.type == 'go' && !matrix.cgo
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          install-only: true
+
+      - name: Build go
+        if: matrix.type == 'go'
+        shell: bash
+        env:
+          INPUT_PROJECT: ${{ inputs.project }}
+          INPUT_PACKAGE: ${{ matrix.package }}
+          PYTHONUNBUFFERED: 1
+        run: |
+          uv run --frozen build-go
+
+      - name: Build wheel
+        if: matrix.type == 'wheel'
+        uses: vmactions/freebsd-vm@v1
+        env:
+          INPUT_PROJECT: ${{ inputs.project }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PACKAGE: ${{ matrix.package }}
+          PYTHONUNBUFFERED: 1
+        with:
+          usesh: true
+          sync: sshfs
+          envs: INPUT_PROJECT INPUT_VERSION INPUT_PACKAGE PYTHONUNBUFFERED
+          prepare: |
+            set -ex
+
+            sysctl net.inet.ip.forwarding=1
+
+            mkdir -p /usr/local/etc/pkg/repos
+            echo 'FreeBSD: { url: "pkg+https://pkg.freebsd.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
+            pkg install -y git gmake python312 rust uv
+            git config --global --add safe.directory '*'
+
+            mkdir -p /root/bin
+            ln -s /usr/local/bin/gmake /root/bin/make
+          run: |
+            set -e
+            cd src
+            env PATH="/root/bin:$PATH" uv build --wheel --python=3.12 --package="$INPUT_PACKAGE"
+            mv dist ../
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.project }}#${{ matrix.package }}
+          path: dist/${{ matrix.package }}-*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: ${{ inputs.project }}#*
+          path: ./dist/
+          merge-multiple: true
+
+      - name: Create release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.project }}-v${{ inputs.version }}
+        run: |
+          for i in dist/*.whl; do
+            i=$(basename "$i")
+            echo "<a href=\"$i\">$i</a><br>" >> dist/wheels.html
+          done
+
+          gh release delete --cleanup-tag --yes $TAG || echo "No existing $TAG"
+
+          echo "Releasing $TAG"
+          gh release create --latest=false --notes=$TAG --title=$TAG $TAG ./dist/*
+
+          for i in $(gh release list --json=tagName --jq="map(select(.tagName | startswith(\"${{ inputs.project }}-\")))[3:] | .[].tagName"); do
+            echo "Deleting $i"
+            gh release delete --cleanup-tag --yes $i || echo "Could not delete $i"
+          done

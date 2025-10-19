@@ -1,31 +1,41 @@
-name: Build
+name: Containers
 
 on:
   workflow_call:
     inputs:
-      container:
+      project:
         type: string
         required: true
-      enabled:
-        type: boolean
+      version:
+        type: string
+        required: false
+      containers:
+        type: string
         required: true
 
 jobs:
-  build:
-    if: ${{ inputs.enabled }}
+  container:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: ${{ fromJSON(inputs.containers) }}
     permissions:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build
         uses: vmactions/freebsd-vm@v1
+        env:
+          INPUT_PROJECT: ${{ inputs.project }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_CONTAINER: ${{ matrix.container }}
+          PYTHONUNBUFFERED: 1
         with:
           usesh: true
           sync: sshfs
-
+          envs: INPUT_PROJECT INPUT_VERSION INPUT_CONTAINER PYTHONUNBUFFERED
           prepare: |
             set -ex
 
@@ -33,22 +43,23 @@ jobs:
 
             mkdir -p /usr/local/etc/pkg/repos
             echo 'FreeBSD: { url: "pkg+https://pkg.freebsd.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
-            pkg install -y podman-suite python3 uv
+            pkg install -y gmake podman-suite python312 rust uv
+
+            mkdir -p /root/bin
+            ln -s /usr/local/bin/gmake /root/bin/make
 
             truncate -s 32G /var/tmp/z
             mkdir -p /var/db/containers/storage
             zpool create -R /var/db/containers/storage -O mountpoint=/ -O compression=lz4 z /var/tmp/z
 
             buildah login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
-
           run: |
-            set -ex
-            uv run --no-build --with=pygithub --with=ruamel-yaml ./build.py '${{ inputs.container }}'
+            env PATH="/root/bin:$PATH" uv run --frozen --no-build --find-links=https://github.com/cynix/freebsd-binaries/releases/tag/pynacl-v1.6.0 build-container
 
       - name: Cleanup
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          package: ${{ inputs.container }}
+          package: ${{ matrix.container }}
           keep-n-tagged: 3
           exclude-tags: latest
           delete-untagged: true

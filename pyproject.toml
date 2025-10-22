@@ -10,12 +10,16 @@ dependencies = [
   "actions-python-core",
   "actions-python-github[githubkit]",
   "packaging",
-  "ruamel.yaml",
+  "pydantic",
+  "pydantic-core",
+  "requests",
+  "rich",
+  "ryaml",
+  "wheel",
 ]
 
 [project.scripts]
 build-container = "builder.container:build_container"
-build-go = "builder.go:build_go"
 build-package = "builder.package:build_package"
 matrix = "builder.matrix:matrix"
 
@@ -26,3 +30,11 @@ ignore = ["E501"]
 [tool.uv.build-backend]
 module-root = ""
 module-name = "builder"
+
+[tool.uv.sources]
+pydantic-core = [
+  { marker = "sys_platform == 'freebsd14'", url = "https://github.com/cynix/freebsd-binaries/releases/download/pydantic-core-v2.41.4/pydantic_core-2.41.4-cp312-cp312-freebsd_14_3_amd64.whl" },
+]
+ryaml = [
+  { marker = "sys_platform == 'freebsd14'", url = "https://github.com/cynix/freebsd-binaries/releases/download/ryaml-v0.4.0/ryaml-0.4.0-cp312-cp312-freebsd_14_3_amd64.whl" },
+]

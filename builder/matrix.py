@@ -2,33 +2,21 @@ import json
 
 from actions import core
 from actions.github import get_githubkit
-from githubkit import GitHub
-from ruamel.yaml import YAML
 
-from .utils import get_release, get_tag
+from .config import Config, ContainerProject, PackageProject
 
 
-def _get_tag(gh: GitHub, project) -> tuple[str, str]:
-    tag, ver = (
-        get_tag(gh, project["repo"], project.get("match"))
-        if project.get("tag")
-        else get_release(gh, project["repo"], project.get("match"))
-    )
-    return (tag, ver) if isinstance(tag, str) else (tag.tag_name, ver)
-
-
-def matrix():
-    with open("projects.yaml") as f:
-        y = YAML().load(f)
+def _matrix():
+    root = Config.from_yaml("projects.yaml").root
 
     projects = core.get_input("projects")
-    rebuild = core.get_boolean_input("rebuild")
+    force = core.get_input("force") == "true"
 
     gh = get_githubkit()
 
     releases = (
         []
-        if rebuild
+        if force
         else [
             x.tag_name
             for x in gh.rest.paginate(
@@ -40,62 +28,55 @@ def matrix():
     matrix = []
 
     for name in sorted(
-        y.keys() if projects == "all" else set(x.strip() for x in projects.split(","))
+        root.keys()
+        if projects == "all"
+        else set(x.strip() for x in projects.split(","))
     ):
-        config = y[name]
+        project = root[name]
 
-        project = {"project": name}
+        job = {"project": name}
         packages = []
         containers = []
 
-        if go := config.get("go"):
-            tag, ver = _get_tag(gh, go)
-            project["version"] = ver
+        if isinstance(project, PackageProject):
+            ref, ver = project.resolve(gh)
+            assert ver.raw
+            job["version"] = ver.raw
 
             if f"{name}-v{ver}" not in releases:
                 packages.extend(
                     {
                         "package": k,
-                        "type": "go",
-                        "repo": go["repo"],
-                        "ref": tag,
-                        "cgo": go.get("cgo", False),
+                        "builder": project.builder,
+                        "repo": project.repo,
+                        "ref": ref,
                     }
-                    for k in sorted(go["packages"].keys())
+                    for k in sorted(project.packages.keys())
                 )
 
             containers = [
                 k
-                for k in sorted(go["packages"].keys())
-                if "container" in go["packages"][k]
+                for k, v in sorted(project.packages.items(), key=lambda x: x[0])
+                if bool(getattr(v, "container", None))
             ]
-        elif kv := next(
-            ((k, config[k]) for k in ("maturin", "rust", "wheel") if k in config), None
-        ):
-            tag, ver = _get_tag(gh, kv[1])
-            project["version"] = ver
-
-            if f"{name}-v{ver}" not in releases:
-                packages.extend(
-                    {
-                        "package": p,
-                        "type": kv[0],
-                        "repo": kv[1]["repo"],
-                        "ref": tag,
-                    }
-                    for p in sorted(kv[1].get("packages", {name: None}).keys())
-                )
-        elif "container" in config:
+        elif isinstance(project, ContainerProject):
             containers = [name]
         else:
-            core.set_failed("Unknown project type")
-            return 1
+            raise ValueError(f"Unknown type for project {name}: {project}")
 
         if packages:
-            project["packages"] = json.dumps(packages)
+            job["packages"] = json.dumps(packages)
         if containers:
-            project["containers"] = json.dumps(containers)
+            job["containers"] = json.dumps(containers)
 
-        matrix.append(project)
+        matrix.append(job)
 
     core.set_output("matrix", {"include": matrix})
+
+
+def matrix():
+    try:
+        _matrix()
+    except Exception as e:
+        core.set_failed(e)
+        return 1

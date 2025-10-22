@@ -22,13 +22,16 @@ jobs:
     name: build (${{ matrix.package }})
     steps:
       - name: Free disk space
-        if: matrix.type == 'go' && matrix.cgo
-        uses: jlumbroso/free-disk-space@main
+        if: false && (matrix.builder == 'cgo' || matrix.builder == 'uv')
+        uses: mathio/gha-cleanup@v1
+        with:
+          remove-browsers: true
+          verbose: true
 
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout ${{ matrix.repo }}
+      - name: Checkout ${{ matrix.repo }} @ ${{ matrix.ref }}
         uses: actions/checkout@v5
         with:
           repository: ${{ matrix.repo }}
@@ -36,18 +39,18 @@ jobs:
           path: src
 
       - name: Setup uv
-        if: matrix.type != 'wheel'
+        if: matrix.builder != 'uv'
         uses: astral-sh/setup-uv@v7
 
       - name: Setup go
-        if: matrix.type == 'go' && !matrix.cgo
+        if: matrix.builder == 'go'
         uses: actions/setup-go@v6
         with:
           go-version: stable
           check-latest: true
 
       - name: Setup goreleaser
-        if: matrix.type == 'go' && !matrix.cgo
+        if: matrix.builder == 'go'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -55,42 +58,39 @@ jobs:
           install-only: true
 
       - name: Build
-        if: matrix.type != 'wheel'
+        if: matrix.builder != 'uv'
         shell: bash
         env:
           INPUT_PROJECT: ${{ inputs.project }}
           INPUT_VERSION: ${{ inputs.version }}
-          INPUT_TYPE: ${{ matrix.type }}
           INPUT_PACKAGE: ${{ matrix.package }}
         run: |
-          env PYTHONUNBUFFERED=1 uv run --frozen build-${{ matrix.type == 'go' && 'go' || 'package' }}
+          env PYTHONUNBUFFERED=1 uv run --frozen build-package
 
       - name: Build with VM
-        if: matrix.type == 'wheel'
-        uses: vmactions/freebsd-vm@v1
-        env:
-          INPUT_PROJECT: ${{ inputs.project }}
-          INPUT_VERSION: ${{ inputs.version }}
-          INPUT_TYPE: ${{ matrix.type }}
-          INPUT_PACKAGE: ${{ matrix.package }}
+        if: matrix.builder == 'uv'
+        uses: acj/freebsd-firecracker-action@v0.6.0
         with:
-          usesh: true
-          sync: sshfs
-          envs: INPUT_PROJECT INPUT_VERSION INPUT_TYPE INPUT_PACKAGE
-          prepare: |
-            set -ex
+          checkout: false
+          disk-size: 20G
+          pre-run: |
+            rsync --links --recursive --relative . firecracker:
+          run-in-vm: |
+            .github/scripts/setup-freebsd.sh package
 
-            sysctl net.inet.ip.forwarding=1
-
-            mkdir -p /usr/local/etc/pkg/repos
-            echo 'FreeBSD: { url: "pkg+https://pkg.freebsd.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
-            pkg install -y git gmake python312 rust uv
-            git config --global --add safe.directory '*'
-
-            mkdir -p /root/bin
-            ln -s /usr/local/bin/gmake /root/bin/make
-          run: |
-            env PATH="/root/bin:$PATH" PYTHONUNBUFFERED=1 uv run --frozen build-package
+            env \
+              INPUT_PROJECT="${{ inputs.project }}" \
+              INPUT_VERSION="${{ inputs.version }}" \
+              INPUT_PACKAGE="${{ matrix.package }}" \
+              PATH="/root/bin:$PATH" \
+              PYTHONUNBUFFERED=1 \
+              uv run \
+                --frozen \
+                --find-links=https://github.com/cynix/freebsd-binaries/releases/download/maturin-v1.9.6/wheels.html \
+                --find-links=https://github.com/cynix/freebsd-binaries/releases/download/uv-v0.9.5/wheels.html \
+                build-package
+          post-run: |
+            rsync --links --recursive --relative firecracker:dist dist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -130,10 +130,11 @@ jobs:
             echo "<a href=\"$i\">$i</a><br>" >> dist/wheels.html
           done
 
-          gh release delete --cleanup-tag --yes $TAG || echo "No existing $TAG"
+          echo "Deleting existing $TAG"
+          gh release delete --cleanup-tag --yes $TAG || true
 
           echo "Releasing $TAG"
-          gh release create --latest=false --notes=$TAG --title=$TAG $TAG ./dist/*
+          gh release create --latest=true --notes=$TAG --title=$TAG $TAG ./dist/*
 
           for i in $(gh release list --json=tagName --jq="map(select(.tagName | startswith(\"${{ inputs.project }}-\")))[3:] | .[].tagName"); do
             echo "Deleting $i"

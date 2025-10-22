@@ -26,32 +26,23 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Build
-        uses: vmactions/freebsd-vm@v1
-        env:
-          INPUT_PROJECT: ${{ inputs.project }}
-          INPUT_VERSION: ${{ inputs.version }}
-          INPUT_CONTAINER: ${{ matrix.container }}
-          PYTHONUNBUFFERED: 1
+        uses: acj/freebsd-firecracker-action@v0.6.0
         with:
-          usesh: true
-          sync: sshfs
-          envs: INPUT_PROJECT INPUT_VERSION INPUT_CONTAINER PYTHONUNBUFFERED
-          prepare: |
-            set -ex
-
-            sysctl net.inet.ip.forwarding=1
-
-            mkdir -p /usr/local/etc/pkg/repos
-            echo 'FreeBSD: { url: "pkg+https://pkg.freebsd.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
-            pkg install -y podman-suite python312 uv
-
-            truncate -s 32G /var/tmp/z
-            mkdir -p /var/db/containers/storage
-            zpool create -R /var/db/containers/storage -O mountpoint=/ -O compression=lz4 z /var/tmp/z
-
+          checkout: false
+          disk-size: 20G
+          pre-run: |
+            rsync --links --recursive --relative . firecracker:
+          run-in-vm: |
+            .github/scripts/setup-freebsd.sh container
             buildah login -u ${{ github.actor }} -p ${{ github.token }} ghcr.io
-          run: |
-            uv run --frozen build-container
+
+            env \
+              INPUT_PROJECT="${{ inputs.project }}" \
+              INPUT_VERSION="${{ inputs.version }}" \
+              INPUT_PACKAGE="${{ matrix.package }}" \
+              PYTHONUNBUFFERED=1 \
+              uv run -vv --frozen build-container
+          post-run: ""
 
       - name: Cleanup
         uses: dataaxiom/ghcr-cleanup-action@v1

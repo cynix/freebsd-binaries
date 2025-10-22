@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv_build"]
+requires = ["uv_build==0.9.5"]
 build-backend = "uv_build"
 
 [project]
@@ -10,18 +10,29 @@ dependencies = [
   "actions-python-core",
   "actions-python-github[githubkit]",
   "packaging",
+  "pydantic",
+  "requests",
   "ruamel.yaml",
 ]
 
 [project.scripts]
 build-container = "builder.container:build_container"
-build-go = "builder.go:build_go"
 build-package = "builder.package:build_package"
 matrix = "builder.matrix:matrix"
 
 [tool.ruff.lint]
 select = ["F", "E", "W", "I", "UP"]
 ignore = ["E501"]
+
+[tool.uv]
+find-links = [
+  "https://github.com/cynix/freebsd-binaries/releases/download/maturin-v1.9.6/wheels.html",
+  "https://github.com/cynix/freebsd-binaries/releases/download/uv-v0.9.5/wheels.html",
+]
+override-dependencies = [
+  "maturin==1.9.6",
+  "uv_build==0.9.5",
+]
 
 [tool.uv.build-backend]
 module-root = ""

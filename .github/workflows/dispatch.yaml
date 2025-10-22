@@ -7,9 +7,9 @@ on:
         type: string
         required: true
         default: all
-      rebuild:
+      force:
         type: boolean
-        required: true
+        required: false
         default: false
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
         shell: bash
         env:
           INPUT_PROJECTS: ${{ inputs.projects }}
-          INPUT_REBUILD: ${{ inputs.rebuild }}
+          INPUT_FORCE: ${{ inputs.force }}
         run: |
           uv run --frozen matrix
 

@@ -17,9 +17,10 @@ type PackageProject struct {
 }
 
 type RustConfig struct {
-	Manifest string
-	Profile  string
-	Features []string
+	Toolchain string
+	Manifest  string
+	Profile   string
+	Features  []string
 }
 
 type ContainerConfig struct {

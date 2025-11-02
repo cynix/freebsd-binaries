@@ -13,6 +13,15 @@ amule:
     user: amule=852
     entrypoint: /usr/local/bin/amuled
 
+blink.cmp:
+  source: saghen/blink.cmp
+  builder: cargo
+  packages:
+    libblink_cmp_fuzzy:
+      toolchain: nightly
+      binaries:
+        - libblink_cmp_fuzzy.so
+
 caddy:
   container:
     assets:

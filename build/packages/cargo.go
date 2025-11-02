@@ -154,15 +154,20 @@ func (cp *CargoPackage) build(core utils.Core, name, version, arch string) error
 		return fmt.Errorf("unsupported arch: %q", arch)
 	}
 
-	dx := utils.Dockcross{Arch: arch}
+	var args []string
 
-	args := []string{
-		"build",
-		"--target=" + triple,
-		"--profile=" + cp.Profile,
-		"--manifest-path=" + cp.Manifest,
-		fmt.Sprintf("--config=profile.%s.strip=\"symbols\"", cp.Profile),
+	if cp.Toolchain != "" {
+		args = append(args, "+"+cp.Toolchain)
 	}
+
+	args = append(
+		args,
+		"build",
+		"--target="+triple,
+		"--profile="+cp.Profile,
+		"--manifest-path="+cp.Manifest,
+		fmt.Sprintf("--config=profile.%s.strip=\"symbols\"", cp.Profile),
+	)
 
 	if len(cp.Features) > 0 {
 		for _, feature := range cp.Features {
@@ -179,7 +184,7 @@ func (cp *CargoPackage) build(core utils.Core, name, version, arch string) error
 	}
 
 	if err := core.Group(fmt.Sprintf("Building %s package", arch), func() error {
-		return dx.Command("cargo", args...).In("src").Run()
+		return utils.Command("cargo", args...).In("src").Via(&utils.Dockcross{Arch: arch}).Run()
 	}); err != nil {
 		return fmt.Errorf("could not build %s package: %w", arch, err)
 	}

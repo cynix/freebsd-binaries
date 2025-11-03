@@ -97,6 +97,22 @@ jdownloader:
     user: jdownloader=10000
     entrypoint: /entrypoint.sh
 
+node_exporter:
+  source: prometheus/node_exporter
+  builder: cgo
+  packages:
+    node_exporter:
+      main: .
+      ldflags:
+        - -X github.com/prometheus/common/version.Version={{ .Version }}
+        - -X github.com/prometheus/common/version.Revision={{ .ShortCommit }}
+        - -X github.com/prometheus/common/version.Branch={{ .Branch }}
+        - -X github.com/prometheus/common/version.BuildUser=github-actions
+        - -X github.com/prometheus/common/version.BuildDate={{ .Date }}
+      files:
+        - LICENSE
+        - NOTICE
+
 openldap:
   container:
     assets:

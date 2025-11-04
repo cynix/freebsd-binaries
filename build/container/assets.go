@@ -41,16 +41,8 @@ type FileAsset struct {
 	Dst string
 }
 
-type PkgDeployer struct {
-	Pkgs []string
-
-	done map[string]struct{}
-}
-
 type PkgAsset struct {
-	Name string `yaml:"pkg"`
-
-	deployer *PkgDeployer
+	Pkgs []string
 }
 
 type ReleaseAsset struct {
@@ -352,12 +344,7 @@ func (fa *FileAsset) UnmarshalYAML(b []byte) error {
 	return nil
 }
 
-func (pd *PkgDeployer) Deploy(core utils.Core, r utils.Runner, mnt, root string, info containerInfo) (ai assetInfo, err error) {
-	if _, ok := pd.done[info.Arch]; ok {
-		return
-	}
-	pd.done[info.Arch] = struct{}{}
-
+func (pa PkgAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, mnt, root string, info containerInfo) (ai assetInfo, err error) {
 	freebsd, _, _ := strings.Cut(info.FreeBSD, "p")
 	major, minor, ok := strings.Cut(freebsd, ".")
 	if !ok || len(major) != 2 || len(minor) != 1 {
@@ -374,21 +361,21 @@ func (pd *PkgDeployer) Deploy(core utils.Core, r utils.Runner, mnt, root string,
 	abi := rep.Replace("FreeBSD:{major}:{machine}")
 	osv := rep.Replace("{major}0{minor}000")
 
-	if err = core.Group("Installing packages", func() error {
-		return pd.pkg(r, abi, osv, root, "install", pd.Pkgs...).Run()
+	if err = core.Group(fmt.Sprintf("Installing packages: %q", pa.Pkgs), func() error {
+		return pa.pkg(r, abi, osv, root, "install", pa.Pkgs...).Run()
 	}); err != nil {
 		err = fmt.Errorf("could not install packages: %w", err)
 		return
 	}
 
-	ai.InferredEntrypoint = "/usr/local/bin/" + pd.Pkgs[0]
+	ai.InferredEntrypoint = "/usr/local/bin/" + pa.Pkgs[0]
 
-	if err = pd.pkg(r, abi, osv, root, "query", append([]string{"%v"}, pd.Pkgs...)...).Each(func(i int, line string) bool {
+	if err = pa.pkg(r, abi, osv, root, "query", append([]string{"%v"}, pa.Pkgs...)...).Each(func(i int, line string) bool {
 		if ai.InferredVersion == "" {
 			ai.InferredVersion = line
 		}
 
-		ai.AddAnnotation(fmt.Sprintf("org.freebsd.pkg.%s.version", pd.Pkgs[i]), line)
+		ai.AddAnnotation(fmt.Sprintf("org.freebsd.pkg.%s.version", pa.Pkgs[i]), line)
 		return true
 	}); err != nil {
 		err = fmt.Errorf("could not query package versions: %w", err)
@@ -441,13 +428,9 @@ func (pd *PkgDeployer) Deploy(core utils.Core, r utils.Runner, mnt, root string,
 	return
 }
 
-func (pd *PkgDeployer) pkg(r utils.Runner, abi, osv, root, command string, args ...string) *utils.Cmd {
+func (pa PkgAsset) pkg(r utils.Runner, abi, osv, root, command string, args ...string) *utils.Cmd {
 	return r.Command("pkg", append([]string{"--rootdir", root, command}, args...)...).
 		WithEnv("ABI="+abi, "ASSUME_ALWAYS_YES=yes", "OSVERSION="+osv, "PKG_CACHEDIR=/tmp/pkg")
-}
-
-func (pa PkgAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, mnt, root string, info containerInfo) (assetInfo, error) {
-	return pa.deployer.Deploy(core, r, mnt, root, info)
 }
 
 func (ra ReleaseAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, mnt, root string, info containerInfo) (ai assetInfo, err error) {
@@ -500,24 +483,32 @@ func (ci containerInfo) Apply(s string) string {
 }
 
 func (ca *Asset) UnmarshalYAML(b []byte) error {
-	pd := &PkgDeployer{done: make(map[string]struct{})}
-
 	var m map[string]any
 
 	if err := yaml.Unmarshal(b, &m); err != nil {
 		return err
 	}
 
-	if _, ok := m["pkg"]; ok {
-		if err := try[PkgAsset](b, &ca.Deployable); err != nil {
-			return err
+	if v, ok := m["pkg"]; ok {
+		var single struct {
+			Pkg string
 		}
 
-		pa := ca.Deployable.(*PkgAsset)
-		pd.Pkgs = append(pd.Pkgs, pa.Name)
-		pa.deployer = pd
+		if err := yaml.UnmarshalWithOptions(b, &single, yaml.DisallowUnknownField()); err == nil {
+			ca.Deployable = PkgAsset{Pkgs: []string{single.Pkg}}
+			return nil
+		}
 
-		return nil
+		var multi struct {
+			Pkg []string
+		}
+
+		if err := yaml.UnmarshalWithOptions(b, &multi, yaml.DisallowUnknownField()); err == nil {
+			ca.Deployable = PkgAsset{Pkgs: multi.Pkg}
+			return nil
+		}
+
+		return fmt.Errorf("invalid pkg asset: %q", v)
 	}
 
 	if _, ok := m["archive"]; ok {

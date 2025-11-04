@@ -90,8 +90,9 @@ jdownloader:
         version:
           url: https://svn.jdownloader.org/build.php
           regex: 'Latest Revision:[^\d]+(?P<version>\d+)'
-      - pkg: ca_root_nss
-      - pkg: openjdk21-jre
+      - pkg:
+          - ca_root_nss
+          - openjdk21-jre
     env:
       JD_HOME: /jdownloader
     user: jdownloader=10000
@@ -116,16 +117,18 @@ node_exporter:
 openldap:
   container:
     assets:
-      - pkg: openldap26-server
-      - pkg: FreeBSD-libsqlite3
+      - pkg:
+          - openldap26-server
+          - FreeBSD-libsqlite3
     entrypoint: /usr/local/libexec/slapd
 
 plex:
   arch: [amd64]
   container:
     assets:
-      - pkg: plexmediaserver
-      - pkg: FreeBSD-locales
+      - pkg:
+          - plexmediaserver
+          - FreeBSD-locales
     env:
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
@@ -148,9 +151,10 @@ qbittorrent:
   arch: [amd64]
   container:
     assets:
-      - pkg: qbittorrent-nox
-      - pkg: ca_root_nss
-      - pkg: FreeBSD-utilities
+      - pkg:
+          - qbittorrent-nox
+          - ca_root_nss
+          - FreeBSD-utilities
     user: qbittorrent
 
 redis:
@@ -176,14 +180,17 @@ samba-ldap:
   container:
     base: freebsd:runtime
     assets:
-      - pkg: samba420
-      - pkg: FreeBSD-openssl
-      - pkg: FreeBSD-utilities
-      - pkg: nss-pam-ldapd
+      - pkg:
+          - samba420
+          - FreeBSD-openssl
+          - FreeBSD-utilities
+          - nss-pam-ldapd
       - release:
           repo: cynix/freebsd-binaries
           ref: /groundcontrol-v(?P<version>.+)/
         glob: "groundcontrol-v{version}-{triple}.tar.gz"
+        files:
+          - src: groundcontrol
     script: |
       mkdir -m711 var/run/config
       ln -sf /var/run/config/ldap.conf usr/local/etc/openldap/ldap.conf
@@ -204,8 +211,9 @@ snixy:
 step-ca:
   container:
     assets:
-      - pkg: step-certificates
-      - pkg: pcsc-lite
+      - pkg:
+          - step-certificates
+          - pcsc-lite
     user: step
     entrypoint: /usr/local/sbin/step-ca
 

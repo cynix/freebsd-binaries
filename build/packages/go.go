@@ -127,8 +127,7 @@ func (gp *GoProject) BuildContainer(core utils.Core, gh *github.Client, version,
 		BaseProject: gp.BaseProject,
 		Container:   pkg.Container.ContainerConfig,
 	}
-	// Use package name as container name
-	c.Hydrate(name)
+	c.Hydrate(gp.Name)
 
 	return c.BuildContainer(core, gh, version, name)
 }

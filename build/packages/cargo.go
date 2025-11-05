@@ -126,8 +126,7 @@ func (cp *CargoProject) BuildContainer(core utils.Core, gh *github.Client, versi
 		BaseProject: cp.BaseProject,
 		Container:   pkg.Container.ContainerConfig,
 	}
-	// Use package name as container name
-	c.Hydrate(name)
+	c.Hydrate(cp.Name)
 
 	return c.BuildContainer(core, gh, version, name)
 }

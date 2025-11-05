@@ -44,6 +44,20 @@ cloudflared:
         - -X=main.Version={{ .Version }}
         - -X=main.BuildTime={{ .Date }}
 
+dnsname:
+  source:
+    repo: containers/dnsname
+    ref: commit:bdc4ab85266ade865a7c398336e98721e62ef6b2
+    version: 0.0.0-git.20231127162437-1
+  builder: go
+  packages:
+    dnsname:
+      main: ./plugins/meta/{binary}
+      flags:
+        - -mod=vendor
+      ldflags:
+        - -X=main.gitCommit={{ .ShortCommit }}
+
 grafana:
   source: grafana/grafana
   builder: cgo

@@ -58,6 +58,14 @@ dnsname:
       ldflags:
         - -X=main.gitCommit={{ .ShortCommit }}
 
+ffmpeg:
+  arch: [amd64]
+  container:
+    assets:
+      - pkg:
+        - ffmpeg
+        - mkvtoolnix-nogui
+
 grafana:
   source: grafana/grafana
   builder: cgo

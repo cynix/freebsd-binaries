@@ -26,10 +26,11 @@ type ContainerConfig struct {
 	Env        map[string]string
 	User       string
 	Script     string
-	Entrypoint containerEntrypoint
+	Entrypoint StringOrStringSlice
+	Cmd        StringOrStringSlice
 }
 
-type containerEntrypoint []string
+type StringOrStringSlice []string
 
 func (cp *ContainerProject) Hydrate(name string) {
 	cp.Name = name
@@ -236,7 +237,7 @@ func (conf ContainerConfig) build(core utils.Core, gh *github.Client, fc *utils.
 		}
 	}
 
-	args := []string{"--cmd=[]"}
+	var args []string
 
 	for _, a := range conf.Assets {
 		ai, err := a.Deploy(core, gh, fc, mnt, c.root, ci)
@@ -244,7 +245,9 @@ func (conf ContainerConfig) build(core utils.Core, gh *github.Client, fc *utils.
 			return tagged, err
 		}
 
-		if len(conf.Entrypoint) == 0 && ai.InferredEntrypoint != "" {
+		if len(conf.Entrypoint) == 1 && conf.Entrypoint[0] == "" {
+			conf.Entrypoint = []string{}
+		} else if len(conf.Entrypoint) == 0 && ai.InferredEntrypoint != "" {
 			c.l.Info("Deduced entrypoint: %q", ai.InferredEntrypoint)
 			conf.Entrypoint = []string{ai.InferredEntrypoint}
 
@@ -280,8 +283,12 @@ func (conf ContainerConfig) build(core utils.Core, gh *github.Client, fc *utils.
 	entrypoint := strings.Join(slices.Map(conf.Entrypoint, func(s string) string {
 		return fmt.Sprintf("%q", s)
 	}), ",")
+	args = append(args, fmt.Sprintf("--entrypoint=[%s]", entrypoint))
 
-	args = append(args, fmt.Sprintf("--entrypoint=[%s]", entrypoint), "--cmd=")
+	cmd := strings.Join(slices.Map(conf.Cmd, func(s string) string {
+		return fmt.Sprintf("%q", s)
+	}), ",")
+	args = append(args, fmt.Sprintf("--cmd=[%s]", cmd))
 
 	for k, v := range conf.Env {
 		args = append(args, fmt.Sprintf("--env=%s=%s", k, v))
@@ -309,22 +316,22 @@ func (conf ContainerConfig) build(core utils.Core, gh *github.Client, fc *utils.
 	return tagged, nil
 }
 
-func (ep *containerEntrypoint) UnmarshalYAML(b []byte) error {
+func (ss *StringOrStringSlice) UnmarshalYAML(b []byte) error {
 	var s string
 
 	if yaml.Unmarshal(b, &s) == nil {
-		*ep = []string{s}
+		*ss = []string{s}
 		return nil
 	}
 
 	var a []string
 
 	if yaml.Unmarshal(b, &a) == nil {
-		*ep = a
+		*ss = a
 		return nil
 	}
 
-	return fmt.Errorf("entrypoint should be a string or a list of strings")
+	return fmt.Errorf("expected a string or string slice")
 }
 
 type container struct {

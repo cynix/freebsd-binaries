@@ -372,7 +372,7 @@ func (pa PkgAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, mn
 
 	if err = pa.pkg(r, abi, osv, root, "query", append([]string{"%v"}, pa.Pkgs...)...).Each(func(i int, line string) bool {
 		if ai.InferredVersion == "" {
-			ai.InferredVersion = line
+			ai.InferredVersion = strings.ReplaceAll(line, ",", "_")
 		}
 
 		ai.AddAnnotation(fmt.Sprintf("org.freebsd.pkg.%s.version", pa.Pkgs[i]), line)

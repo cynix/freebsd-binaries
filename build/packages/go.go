@@ -191,11 +191,6 @@ func (gp *GoPackage) Build(core utils.Core, name, version string, arch []string,
 		return fmt.Errorf("could not write .goreleaser.yaml: %w", err)
 	}
 
-	// Override version in case tag format is non-standard
-	if err := utils.Command("git", "tag", version).In("src").Run(); err != nil {
-		return fmt.Errorf("could not create git tag %q: %w", version, err)
-	}
-
 	cmd := utils.Command("/bin/sh", "-c", "pwd && cd src && goreleaser release --config=../.goreleaser.yaml --clean --skip=validate").
 		WithEnv("GORELEASER_CURRENT_TAG=" + version)
 

@@ -182,7 +182,7 @@ func (aa ArchiveAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner
 					var src string
 
 					for src = name; src != "."; src = path.Dir(src) {
-						if doublestar.MatchUnvalidated(af.Src, src) {
+						if doublestar.MatchUnvalidated(strings.TrimSuffix(af.Src, "/"), src) {
 							break
 						}
 					}
@@ -223,8 +223,8 @@ func (aa ArchiveAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner
 				ai.InferredEntrypoint = dst
 			}
 
-			dst = path.Join(mnt, root, dst)
 			core.Info("Extracting %q -> %q", name, dst)
+			dst = path.Join(mnt, root, dst)
 
 			if err := os.MkdirAll(path.Dir(dst), 0o755); err != nil {
 				return fmt.Errorf("could not create dir %q: %w", path.Dir(dst), err)

@@ -370,16 +370,18 @@ func (pa PkgAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, mn
 
 	ai.InferredEntrypoint = "/usr/local/bin/" + pa.Pkgs[0]
 
-	if err = pa.pkg(r, abi, osv, root, "query", append([]string{"%v"}, pa.Pkgs...)...).Each(func(i int, line string) bool {
-		if ai.InferredVersion == "" {
-			ai.InferredVersion = strings.ReplaceAll(line, ",", "_")
+	if err2 := pa.pkg(r, abi, osv, root, "query", append([]string{"org.freebsd.pkg.%n.version=%v"}, pa.Pkgs...)...).Each(func(i int, line string) bool {
+		if n, v, ok := strings.Cut(line, "="); ok {
+			if i == 0 && ai.InferredVersion == "" {
+				ai.InferredVersion = strings.ReplaceAll(v, ",", "_")
+			}
+
+			ai.AddAnnotation(n, v)
 		}
 
-		ai.AddAnnotation(fmt.Sprintf("org.freebsd.pkg.%s.version", pa.Pkgs[i]), line)
 		return true
-	}); err != nil {
-		err = fmt.Errorf("could not query package versions: %w", err)
-		return
+	}); err2 != nil {
+		core.Warning("could not query package versions: %v", err2)
 	}
 
 	if err2 := os.RemoveAll(path.Join(mnt, root, "/var/cache/pkg")); err2 != nil {

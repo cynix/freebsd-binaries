@@ -152,8 +152,8 @@ plex:
           - plexmediaserver
           - FreeBSD-locales
     env:
-      LANG: en_US.UTF-8
-      LC_ALL: en_US.UTF-8
+      LANG: C
+      LC_ALL: C
       LD_LIBRARY_PATH: /usr/local/share/plexmediaserver/lib
       PATH: /usr/local/share/plexmediaserver/Resources/Python/bin:$PATH
       PYTHONHOME: /usr/local/share/plexmediaserver/Resources/Python

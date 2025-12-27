@@ -3,18 +3,11 @@ set -eu
 
 mkdir -p /usr/local/etc/pkg/repos
 cat > /usr/local/etc/pkg/repos/FreeBSD.conf <<'EOF'
-FreeBSD: {
+FreeBSD-ports: {
   url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest"
 }
 FreeBSD-base: {
-  url: "pkg+https://pkg.FreeBSD.org/${ABI}/base_release_${VERSION_MINOR}",
-  mirror_type: "srv",
-  signature_type: "fingerprints",
-  fingerprints: "/usr/share/keys/pkg",
   enabled: yes
-}
-FreeBSD-kmods: {
-  enabled: no
 }
 EOF
 

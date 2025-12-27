@@ -32,7 +32,7 @@ jobs:
           check-latest: true
 
       - name: Setup FreeBSD VM
-        uses: cynix/freebsd-firecracker-action@v0.6.0-containers
+        uses: cynix/freebsd-firecracker-action@v0.8.0-containers
 
       - name: Build FreeBSD builder
         shell: bash

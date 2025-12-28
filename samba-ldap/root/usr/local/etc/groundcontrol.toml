@@ -1,10 +1,10 @@
 [[processes]]
 name = "generate"
-pre = [ "/templates/generate.sh" ]
+pre = ["/templates/generate.sh"]
 
 [[processes]]
 name = "rehash"
-pre = [ "certctl", "rehash" ]
+pre = ["sh", "-c", "umask 022; certctl rehash"]
 
 [[processes]]
 name = "nslcd"

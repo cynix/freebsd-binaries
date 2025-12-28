@@ -138,6 +138,7 @@ node_exporter:
 
 openldap:
   container:
+    base: freebsd:14-runtime
     assets:
       - pkg:
           - openldap26-server

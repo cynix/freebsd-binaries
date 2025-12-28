@@ -333,6 +333,7 @@ func (fa *FileAsset) UnmarshalYAML(b []byte) error {
 	var raw struct {
 		File    string
 		Version version.VersionConfig
+		Dst     string
 	}
 
 	if err := yaml.UnmarshalWithOptions(b, &raw, yaml.DisallowUnknownField()); err != nil {
@@ -340,6 +341,7 @@ func (fa *FileAsset) UnmarshalYAML(b []byte) error {
 	}
 
 	fa.URLAsset = URLAsset{raw.File, raw.Version}
+	fa.Dst = raw.Dst
 
 	return nil
 }

@@ -112,6 +112,7 @@ jdownloader:
         version:
           url: https://svn.jdownloader.org/build.php
           regex: 'Latest Revision:[^\d]+(?P<version>\d+)'
+        dst: /bootstrap/
       - pkg:
           - ca_root_nss
           - openjdk21-jre

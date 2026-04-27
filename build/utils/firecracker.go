@@ -304,14 +304,13 @@ func (fc *Firecracker) serve() error {
 	}
 }
 
-func ServeFirecracker(marker string, r io.Reader, w io.Writer) error {
+func ServeFirecracker(marker string) error {
 	if marker == "" {
 		return fmt.Errorf("invalid message marker")
 	}
 
 	fc := &Firecracker{
 		w: os.Stdout,
-		r: os.Stdin,
 		m: marker,
 		b: bufio.NewReader(os.Stdin),
 	}

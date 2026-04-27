@@ -38,8 +38,6 @@ github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWR
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/cynix/actions-go-toolkit v0.0.0-20251025141411-b0ff04970293 h1:m8vmC49anIeWtc8+i+7k315x400Y0K8HawPqAXmk91s=
-github.com/cynix/actions-go-toolkit v0.0.0-20251025141411-b0ff04970293/go.mod h1:NaOTN6XGtMFzdQYVrVjk2h1xdkiAwOZGdeBHwNb6ufQ=
 github.com/cynix/actions-go-toolkit v0.0.0-20251102041314-a249bd7c4dd7 h1:3Aoyd7+QgZ2VUL6G0g8e4PMhFkatTOwrSm1nr9HD+tI=
 github.com/cynix/actions-go-toolkit v0.0.0-20251102041314-a249bd7c4dd7/go.mod h1:NaOTN6XGtMFzdQYVrVjk2h1xdkiAwOZGdeBHwNb6ufQ=
 github.com/davecgh/go-spew v0.0.0-20161028175848-04cdfd42973b/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -29,7 +29,7 @@ func run(core utils.Core) int {
 			return 1
 		}
 
-		if err := utils.ServeFirecracker(os.Args[2], os.Stdin, os.Stdout); err != nil {
+		if err := utils.ServeFirecracker(os.Args[2]); err != nil {
 			fmt.Printf("Could not serve: %v\n", err)
 			return 1
 		}

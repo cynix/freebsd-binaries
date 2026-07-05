@@ -273,7 +273,9 @@ victoria-logs:
         - osusergo
 
 victoria-metrics:
-  source: VictoriaMetrics/VictoriaMetrics
+  source:
+    repo: VictoriaMetrics/VictoriaMetrics
+    ref: /v(?P<version>[0-9.]+)/
   builder: go
   packages:
     victoria-metrics:

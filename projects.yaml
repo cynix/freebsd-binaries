@@ -1,9 +1,6 @@
 ---
 akr:
-  source:
-    repo: akamai/akr
-    ref: commit:2ebc04fac9d2dbc5274b47e2a2456f417adaa2d5
-    version: 0.0.0-git.20250923202250-1
+  source: akamai/akr
   builder: cargo
 
 amule:

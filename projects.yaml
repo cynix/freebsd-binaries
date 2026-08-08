@@ -88,6 +88,10 @@ groundcontrol:
     ref: tag
   builder: cargo
 
+herdr:
+  source: herdrdev/herdr
+  builder: cargo
+
 jdownloader:
   arch: [amd64]
   container:

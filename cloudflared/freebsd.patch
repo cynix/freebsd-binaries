@@ -1,3 +1,15 @@
+diff --git c/cmd/cloudflared/freebsd_service.go i/cmd/cloudflared/freebsd_service.go
+new file mode 100644
+index 00000000..b988f8f8
+--- /dev/null
++++ i/cmd/cloudflared/freebsd_service.go
+@@ -0,0 +1,6 @@
++//go:build freebsd
++
++package main
++
++// OS-specific function for token file creation
++var createTokenFile = createTokenFileUnix
 diff --git c/diagnostic/network/collector_unix.go i/diagnostic/network/collector_unix.go
 index 2db2d262..94bfaa15 100644
 --- c/diagnostic/network/collector_unix.go

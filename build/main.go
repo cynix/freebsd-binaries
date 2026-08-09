@@ -24,12 +24,7 @@ func run(core utils.Core) int {
 	}
 
 	if os.Args[1] == "serve" {
-		if len(os.Args) < 3 {
-			fmt.Println("Missing command marker")
-			return 1
-		}
-
-		if err := utils.ServeFirecracker(os.Args[2]); err != nil {
+		if err := utils.ServeFirecracker(); err != nil {
 			fmt.Printf("Could not serve: %v\n", err)
 			return 1
 		}

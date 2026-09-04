@@ -92,6 +92,13 @@ herdr:
   source: herdrdev/herdr
   builder: cargo
 
+herdr-titles:
+  source: davidolrik/herdr-titles
+  builder: go
+  packages:
+    herdr-titles:
+      main: .
+
 jdownloader:
   arch: [amd64]
   container:

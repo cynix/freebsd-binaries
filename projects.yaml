@@ -303,11 +303,3 @@ victoria-metrics:
       tags:
         - netgo
         - osusergo
-
-zellij:
-  source: zellij-org/zellij
-  builder: cargo
-  defaults:
-    package:
-      features:
-        - -default

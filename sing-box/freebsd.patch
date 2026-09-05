@@ -1,0 +1,14 @@
+diff --git i/protocol/direct/outbound.go w/protocol/direct/outbound.go
+index 1ca35af0..fd3cdda7 100644
+--- i/protocol/direct/outbound.go
++++ w/protocol/direct/outbound.go
+@@ -99,6 +99,9 @@ func (h *Outbound) Start(stage adapter.StartStage) error {
+ }
+ 
+ func (h *Outbound) fetchMyAddresses() {
++	if h.network.InterfaceMonitor() == nil {
++		return
++	}
+ 	myInterfaceNames := h.network.InterfaceMonitor().MyInterfaces()
+ 	if len(myInterfaceNames) == 0 {
+ 		return

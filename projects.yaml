@@ -32,6 +32,15 @@ cloudflared:
         - -X=main.Version={{ .Version }}
         - -X=main.BuildTime={{ .Date }}
 
+diffnav:
+  source: dlvhdr/diffnav
+  builder: go
+  packages:
+    herdr-titles:
+      main: .
+      ldflags:
+        - -X=github.com/dlvhdr/diffnav/pkg/version.Version={{ .Version }}
+
 dnsname:
   source:
     repo: containers/dnsname

@@ -1,5 +1,5 @@
 diff --git i/build.rs w/build.rs
-index 66ed2620..1401d440 100644
+index b7a6a005..0df23044 100644
 --- i/build.rs
 +++ w/build.rs
 @@ -5,6 +5,8 @@ use std::process::Command;
@@ -11,8 +11,21 @@ index 66ed2620..1401d440 100644
          "x86_64-unknown-linux-gnu" => "x86_64-linux-gnu",
          "aarch64-unknown-linux-gnu" => "aarch64-linux-gnu",
          "x86_64-unknown-linux-musl" => "x86_64-linux-musl",
+diff --git i/src/app/api/plugins/manifest.rs w/src/app/api/plugins/manifest.rs
+index 657f8257..68ed3739 100644
+--- i/src/app/api/plugins/manifest.rs
++++ w/src/app/api/plugins/manifest.rs
+@@ -510,6 +510,8 @@ fn normalize_platforms(
+ fn current_platform() -> PluginPlatform {
+     if cfg!(target_os = "linux") {
+         PluginPlatform::Linux
++    } else if cfg!(target_os = "freebsd") {
++        PluginPlatform::Linux
+     } else if cfg!(target_os = "macos") {
+         PluginPlatform::Macos
+     } else {
 diff --git i/src/platform/fallback.rs w/src/platform/fallback.rs
-index 30bea5eb..fa88b45e 100644
+index cdfbc157..6d19f72d 100644
 --- i/src/platform/fallback.rs
 +++ w/src/platform/fallback.rs
 @@ -1,3 +1,4 @@
@@ -20,7 +33,7 @@ index 30bea5eb..fa88b45e 100644
  use std::path::PathBuf;
  use std::process::Command;
  
-@@ -66,6 +67,11 @@ pub fn foreground_process_group_id(_child_pid: u32) -> Option<u32> {
+@@ -173,6 +174,11 @@ pub fn foreground_process_group_id(_child_pid: u32) -> Option<u32> {
      None
  }
  

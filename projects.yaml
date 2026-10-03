@@ -26,8 +26,6 @@ cloudflared:
         user: cloudflared=443
   defaults:
     package:
-      flags:
-        - -mod=vendor
       ldflags:
         - -X=main.Version={{ .Version }}
         - -X=main.BuildTime={{ .Date }}

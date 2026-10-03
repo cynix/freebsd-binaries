@@ -209,7 +209,7 @@ samba-ldap:
     base: freebsd:runtime
     assets:
       - pkg:
-          - samba423
+          - samba424
           - FreeBSD-openssl
           - FreeBSD-utilities
           - nss-pam-ldapd

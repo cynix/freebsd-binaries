@@ -17,7 +17,7 @@ type PackageProject struct {
 }
 
 type RustConfig struct {
-	Toolchain string
+	Use       map[string]string
 	Manifest  string
 	Profile   string
 	Features  []string

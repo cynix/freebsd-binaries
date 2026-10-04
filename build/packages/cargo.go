@@ -155,10 +155,6 @@ func (cp *CargoPackage) build(core utils.Core, name, version, arch string) error
 
 	var args []string
 
-	if cp.Toolchain != "" {
-		args = append(args, "+"+cp.Toolchain)
-	}
-
 	args = append(
 		args,
 		"build",
@@ -178,12 +174,12 @@ func (cp *CargoPackage) build(core utils.Core, name, version, arch string) error
 		}
 	}
 
-	if arch == "arm64" {
-		args = append(args, "-Z", "build-std=core,std,alloc,proc_macro,panic_abort")
-	}
+	use := maps.Clone(cp.Use)
+	use[fmt.Sprintf("rust[targets=%s]", triple)] = use["rust"]
+	delete(use, "rust")
 
 	if err := core.Group(fmt.Sprintf("Building %s package", arch), func() error {
-		return utils.Command("cargo", args...).In("src").Via(&utils.Dockcross{Arch: arch}).Run()
+		return utils.Command("cargo", args...).In("src").Via(&utils.Mise{Arch: arch, Use: use}).Run()
 	}); err != nil {
 		return fmt.Errorf("could not build %s package: %w", arch, err)
 	}
@@ -264,6 +260,18 @@ func (cp *CargoPackage) build(core utils.Core, name, version, arch string) error
 }
 
 func (c *CargoConfig) Hydrate(defaults CargoConfig) {
+	if len(c.Use) == 0 {
+		c.Use = maps.Clone(defaults.Use)
+	}
+
+	if c.Use == nil {
+		c.Use = make(map[string]string)
+	}
+
+	if _, ok := c.Use["rust"]; !ok {
+		c.Use["rust"] = "stable"
+	}
+
 	if c.Manifest == "" {
 		if c.Manifest = defaults.Manifest; c.Manifest == "" {
 			c.Manifest = "Cargo.toml"

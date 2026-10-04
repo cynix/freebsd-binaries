@@ -98,6 +98,10 @@ groundcontrol:
 herdr:
   source: herdrdev/herdr
   builder: cargo
+  defaults:
+    package:
+      use:
+        zig: "0.16"
 
 herdr-titles:
   source: davidolrik/herdr-titles

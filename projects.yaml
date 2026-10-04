@@ -148,7 +148,7 @@ openldap:
     base: freebsd:14-runtime
     assets:
       - pkg:
-          - openldap26-server
+          - openldap27-server
           - FreeBSD-libsqlite3
     entrypoint: /usr/local/libexec/slapd
 

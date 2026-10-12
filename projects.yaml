@@ -62,32 +62,11 @@ ffmpeg:
         - mkvtoolnix-nogui
 
 grafana:
-  source: grafana/grafana
-  builder: cgo
-  packages:
-    grafana:
-      container:
-        files:
-          - src: conf/
-            dst: /usr/local/share/grafana/
-          - src: public/
-            dst: /usr/local/share/grafana/
-        user: grafana=904
-  defaults:
-    package:
-      main: ./pkg/cmd/{binary}
-      ldflags:
-        - -X=main.version={{ .Version }}
-        - -X=main.commit={{ .ShortCommit }}
-      tags:
-        - oss
-      before:
-        - env -u GOOS -u GOARCH go run ./pkg/build/wire/cmd/wire/main.go gen -tags=oss ./pkg/server
-        - sh -c 'curl -sSL https://dl.grafana.com/oss/release/grafana-{{ .Version }}.linux-amd64.tar.gz | tar -zxf- --strip-components=1 grafana-{{ .Version }}/public'
-      files:
-        - LICENSE
-        - conf/defaults.ini
-        - public/**/*
+  container:
+    assets:
+      - pkg: grafana
+    user: grafana=904
+    entrypoint: /usr/local/bin/grafana
 
 groundcontrol:
   source:

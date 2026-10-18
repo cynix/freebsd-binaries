@@ -1,3 +1,19 @@
+diff --git i/Cargo.lock w/Cargo.lock
+index 9357a151..fcd7a3ba 100644
+--- i/Cargo.lock
++++ w/Cargo.lock
+@@ -945,9 +945,9 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
+ 
+ [[package]]
+ name = "libc"
+-version = "0.2.190"
++version = "0.2.191"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
++checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
+ 
+ [[package]]
+ name = "line-clipping"
 diff --git i/crates/ghostty-vt/build.rs w/crates/ghostty-vt/build.rs
 index af02e0a7..732529f4 100644
 --- i/crates/ghostty-vt/build.rs
@@ -12,10 +28,10 @@ index af02e0a7..732529f4 100644
          "aarch64-unknown-linux-gnu" => "aarch64-linux-gnu",
          "x86_64-unknown-linux-musl" => "x86_64-linux-musl",
 diff --git i/src/app/api/plugins/manifest.rs w/src/app/api/plugins/manifest.rs
-index fb650065..9a503047 100644
+index 74ce0525..126b29ae 100644
 --- i/src/app/api/plugins/manifest.rs
 +++ w/src/app/api/plugins/manifest.rs
-@@ -508,6 +508,8 @@ fn normalize_platforms(
+@@ -517,6 +517,8 @@ fn normalize_platforms(
  fn current_platform() -> PluginPlatform {
      if cfg!(target_os = "linux") {
          PluginPlatform::Linux
@@ -25,7 +41,7 @@ index fb650065..9a503047 100644
          PluginPlatform::Macos
      } else {
 diff --git i/src/platform/fallback.rs w/src/platform/fallback.rs
-index 21d13ba0..6d2c8960 100644
+index 2dc7772f..eae8c955 100644
 --- i/src/platform/fallback.rs
 +++ w/src/platform/fallback.rs
 @@ -1,10 +1,19 @@
@@ -136,9 +152,9 @@ index 21d13ba0..6d2c8960 100644
 +}
 +
  #[cfg(unix)]
- pub(super) const REMOTE_BRIDGE_CLOCK: libc::clockid_t = libc::CLOCK_MONOTONIC;
- 
-@@ -207,6 +298,12 @@ pub fn foreground_process_group_id(_child_pid: u32) -> Option<u32> {
+ pub(super) fn socket_peer_pid(_fd: std::os::fd::RawFd) -> Option<u32> {
+     None
+@@ -217,6 +308,12 @@ pub fn foreground_process_group_id(_child_pid: u32) -> Option<u32> {
      None
  }
  

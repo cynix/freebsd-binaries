@@ -60,14 +60,23 @@ func (cp *ContainerProject) Hydrate(name string) {
 			}
 
 		case *ReleaseAsset:
-			if len(x.Files) == 0 {
-				x.Files = append(x.Files, ArchiveFile{Src: "{package}"})
-			}
+			if strings.Contains(x.Glob, ".tar.") || strings.HasSuffix(x.Glob, ".tgz") || strings.HasSuffix(x.Glob, ".txz") || strings.HasSuffix(x.Glob, ".zip") {
+				if len(x.Files) == 0 {
+					x.Files = append(x.Files, ArchiveFile{Src: "{package}"})
+				}
 
-			for i := range x.Files {
-				f := &x.Files[i]
-				if f.Dst == "" {
-					f.Dst = "/usr/local/bin/"
+				for i := range x.Files {
+					f := &x.Files[i]
+					if f.Dst == "" {
+						f.Dst = "/usr/local/bin/"
+					}
+				}
+			} else {
+				if x.Dst == "" {
+					x.Dst = "/usr/local/bin/"
+				}
+				if x.Mode == 0 {
+					x.Mode = 0o755
 				}
 			}
 		}

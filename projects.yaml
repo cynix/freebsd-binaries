@@ -131,6 +131,15 @@ openldap:
           - FreeBSD-libsqlite3
     entrypoint: /usr/local/libexec/slapd
 
+pocket-id:
+  container:
+    assets:
+      - release: pocket-id/pocket-id
+        glob: "pocket-id_freebsd_{arch}"
+    env:
+      APP_ENV: production
+    user: pocket-id=834
+
 plex:
   arch: [amd64]
   container:

@@ -38,7 +38,8 @@ type ArchiveAsset struct {
 
 type FileAsset struct {
 	URLAsset
-	Dst string
+	Dst  string
+	Mode int
 }
 
 type PkgAsset struct {
@@ -49,6 +50,8 @@ type ReleaseAsset struct {
 	Release version.ReleaseRef
 	Glob    string
 	Files   []ArchiveFile
+	Dst     string
+	Mode    int
 }
 
 type containerInfo struct {
@@ -300,6 +303,9 @@ func (fa FileAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, m
 		if fa.Dst == "" {
 			fa.Dst = "/usr/local/{package}/"
 		}
+		if fa.Mode == 0 {
+			fa.Mode = 0644
+		}
 
 		dst := calculateDst(filename, info.Apply(fa.Dst))
 
@@ -313,7 +319,7 @@ func (fa FileAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner, m
 			return fmt.Errorf("could not create dir %q: %w", path.Dir(dst), err)
 		}
 
-		f, err := os.Create(dst)
+		f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(fa.Mode))
 		if err != nil {
 			return fmt.Errorf("could not create file %q: %w", dst, err)
 		}
@@ -334,14 +340,20 @@ func (fa *FileAsset) UnmarshalYAML(b []byte) error {
 		File    string
 		Version version.VersionConfig
 		Dst     string
+		Mode    int
 	}
 
 	if err := yaml.UnmarshalWithOptions(b, &raw, yaml.DisallowUnknownField()); err != nil {
 		return err
 	}
 
+	if raw.Mode < 0 || raw.Mode > 0o777 {
+		return fmt.Errorf("invalid file mode: %d", raw.Mode)
+	}
+
 	fa.URLAsset = URLAsset{raw.File, raw.Version}
 	fa.Dst = raw.Dst
+	fa.Mode = raw.Mode
 
 	return nil
 }
@@ -455,14 +467,22 @@ func (ra ReleaseAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner
 			continue
 		}
 
-		aa := ArchiveAsset{
-			URLAsset: URLAsset{
+		var d Deployable
+
+		if ra.Dst != "" {
+			d = FileAsset{
 				URL: *a.BrowserDownloadURL,
-			},
-			Files: ra.Files,
+				Dst: ra.Dst,
+				Mode: ra.Mode,
+			}
+		} else {
+			d = ArchiveAsset{
+				URL: *a.BrowserDownloadURL,
+				Files: ra.Files,
+			}
 		}
 
-		ai, err = aa.Deploy(core, gh, r, mnt, root, info)
+		ai, err = d.Deploy(core, gh, r, mnt, root, info)
 		ai.InferredVersion = ver
 
 		if owner, repo, _ := strings.Cut(ra.Release.Repo, "/"); owner != "" && repo != "" {
@@ -474,6 +494,38 @@ func (ra ReleaseAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner
 
 	err = fmt.Errorf("could not find matching asset from release in %q: %q", ra.Release.Repo, glob)
 	return
+}
+
+func (ra *ReleaseAsset) UnmarshalYAML(b []byte) error {
+	var raw struct {
+		Release version.ReleaseRef
+		Glob    string
+		Files   []ArchiveFile
+		Dst     string
+		Mode    int
+	}
+
+	if err := yaml.UnmarshalWithOptions(b, &raw, yaml.DisallowUnknownField()); err != nil {
+		return err
+	}
+
+	if archive := isArchive(raw.Glob); archive && (raw.Dst != "" || raw.Mode != 0) {
+		return fmt.Errorf("cannot specify dst/mode for archive release asset")
+	} else if !archive && len(raw.Files) > 0 {
+		return fmt.Errorf("cannot specify files for non-archive release asset")
+	}
+
+	if raw.Mode < 0 || raw.Mode > 0o777 {
+		return fmt.Errorf("invalid file mode: %d", raw.Mode)
+	}
+
+	ra.Release = raw.Release
+	ra.Glob = raw.Glob
+	ra.Files = raw.Files
+	ra.Dst = raw.Dst
+	ra.Mode = raw.Mode
+
+	return nil
 }
 
 func (ci containerInfo) Apply(s string) string {
@@ -548,6 +600,10 @@ func calculateDst(src, dst string) string {
 	}
 
 	return dst
+}
+
+func isArchive(name string) bool {
+	return strings.Contains(name, ".tar.") || strings.HasSuffix(name, ".tgz") || strings.HasSuffix(name, ".txz") || strings.HasSuffix(name, ".zip")
 }
 
 func try[T any, D interface {

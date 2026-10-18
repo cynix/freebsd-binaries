@@ -39,6 +39,25 @@ index 7dcd564..a50c26e 100644
 +        Ok("# Please start akr manually".to_string())
 +    }
 +}
+diff --git c/crates/kr/src/main.rs w/crates/kr/src/main.rs
+index 6baf84b..7367ca5 100644
+--- c/crates/kr/src/main.rs
++++ w/crates/kr/src/main.rs
+@@ -106,10 +106,12 @@ async fn pair() -> Result<(), Error> {
+     let qr = PairingQr {
+         public_key: keypair.public_key.clone(),
+         version: PROTOCOL_VERSION.into(),
+-        name: whoami::devicename()?,
++        name: whoami::devicename()
++            .or_else(|_| whoami::hostname())
++            .unwrap_or_else(|_| "unknown".to_string()),
+         os: Os {
+             version: whoami::platform().to_string(),
+-            kind: whoami::distro()?,
++            kind: whoami::distro().unwrap_or_else(|_| format!("Unknown {}", whoami::platform())),
+             device_identifier: global_device_uuid()?,
+         },
+     };
 diff --git c/crates/kr/src/prompt.rs w/crates/kr/src/prompt.rs
 index f2d1926..dfb1e9c 100644
 --- c/crates/kr/src/prompt.rs

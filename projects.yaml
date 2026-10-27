@@ -30,6 +30,21 @@ cloudflared:
         - -X=main.Version={{ .Version }}
         - -X=main.BuildTime={{ .Date }}
 
+coredns:
+  source: coredns/coredns
+  builder: go
+  defaults:
+    package:
+      main: .
+      ldflags:
+        - '-X=github.com/coredns/coredns/coremain.GitCommit={{ .ShortCommit }}'
+      tags:
+        - grpcnotrace
+      before:
+        - sh -c 'echo docker:github.com/dokku/coredns-docker >> plugin.cfg'
+        - go generate coredns.go
+        - go get
+
 diffnav:
   source: dlvhdr/diffnav
   builder: go

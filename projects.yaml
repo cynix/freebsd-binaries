@@ -226,6 +226,16 @@ snixy:
         glob: "snixy-v{version}-freebsd_{arch}.tar.gz"
     user: snixy=940  # _tcpproxy
 
+step:
+  source: smallstep/cli
+  builder: go
+  defaults:
+    package:
+      main: ./cmd/{binary}
+      ldflags:
+        - '-X=main.Version={{.Version}}'
+        - '-X=main.BuildTime={{.Date}}'
+
 step-ca:
   container:
     assets:

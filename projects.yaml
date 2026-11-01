@@ -54,25 +54,11 @@ diffnav:
       ldflags:
         - -X=github.com/dlvhdr/diffnav/pkg/version.Version={{ .Version }}
 
-dnsname:
-  source:
-    repo: containers/dnsname
-    ref: commit:bdc4ab85266ade865a7c398336e98721e62ef6b2
-    version: 0.0.0-git.20231127162437-1
-  builder: go
-  packages:
-    dnsname:
-      main: ./plugins/meta/{binary}
-      flags:
-        - -mod=vendor
-      ldflags:
-        - -X=main.gitCommit={{ .ShortCommit }}
-
 evil-helix:
   source:
     repo: usagi-flow/evil-helix
     ref: commit:62f05ffc8d5cdb27e077a25695b4e209d568ca24
-    version: 0.0.0-git.20261028194829-1
+    version: 0.0.0+git.20261028194829.1
   builder: cargo
   packages:
     evil-helix:

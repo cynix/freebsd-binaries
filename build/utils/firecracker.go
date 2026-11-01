@@ -64,7 +64,7 @@ func (fc *Firecracker) Run(cmd *exec.Cmd) error {
 
 	wg.Go(func() {
 		if cmd.Stdin != nil {
-			b := make([]byte, 16 * 1024)
+			b := make([]byte, 16*1024)
 
 			for {
 				n, err := cmd.Stdin.Read(b)
@@ -284,7 +284,7 @@ func (fc *Firecracker) run(ex execute) (err error) {
 	})
 
 	wg.Go(func() {
-		b := make([]byte, 16 * 1024)
+		b := make([]byte, 16*1024)
 
 		for {
 			n, err := stdout.Read(b)

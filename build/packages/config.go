@@ -17,10 +17,10 @@ type PackageProject struct {
 }
 
 type RustConfig struct {
-	Use       map[string]string
-	Manifest  string
-	Profile   string
-	Features  []string
+	Use      map[string]string
+	Manifest string
+	Profile  string
+	Features []string
 }
 
 type ContainerConfig struct {

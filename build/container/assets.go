@@ -471,13 +471,13 @@ func (ra ReleaseAsset) Deploy(core utils.Core, gh *github.Client, r utils.Runner
 
 		if ra.Dst != "" {
 			d = FileAsset{
-				URL: *a.BrowserDownloadURL,
-				Dst: ra.Dst,
+				URL:  *a.BrowserDownloadURL,
+				Dst:  ra.Dst,
 				Mode: ra.Mode,
 			}
 		} else {
 			d = ArchiveAsset{
-				URL: *a.BrowserDownloadURL,
+				URL:   *a.BrowserDownloadURL,
 				Files: ra.Files,
 			}
 		}

@@ -68,6 +68,21 @@ dnsname:
       ldflags:
         - -X=main.gitCommit={{ .ShortCommit }}
 
+evil-helix:
+  source:
+    repo: usagi-flow/evil-helix
+    ref: commit:62f05ffc8d5cdb27e077a25695b4e209d568ca24
+    version: 0.0.0-git.20261028194829-1
+  builder: cargo
+  packages:
+    evil-helix:
+      binaries:
+        - hx
+      files:
+        - runtime/grammars/*.so
+        - runtime/queries/**/*.scm
+        - runtime/themes/*.toml
+
 ffmpeg:
   arch: [amd64]
   container:

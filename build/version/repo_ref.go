@@ -185,7 +185,7 @@ func (rr RepoRef) RefVersion(gh *github.Client) (string, string, error) {
 		}
 
 		var err error
-		if tv.sv, err = semver.StrictNewVersion(tv.Version); err != nil {
+		if tv.sv, err = semver.NewVersion(tv.Version); err != nil {
 			continue
 		}
 
@@ -237,7 +237,7 @@ func (rr RepoRef) ReleaseVersion(gh *github.Client) (rls *github.RepositoryRelea
 		}
 
 		if ver != "" {
-			if _, err2 := semver.StrictNewVersion(ver); err2 != nil {
+			if _, err2 := semver.NewVersion(ver); err2 != nil {
 				ver = ""
 			}
 		}
@@ -275,7 +275,7 @@ func (rr RepoRef) ReleaseVersion(gh *github.Client) (rls *github.RepositoryRelea
 		rv := releaseVersion{Release: rls, Version: m[rr.index]}
 
 		var err2 error
-		if rv.sv, err2 = semver.StrictNewVersion(rv.Version); err2 != nil {
+		if rv.sv, err2 = semver.NewVersion(rv.Version); err2 != nil {
 			continue
 		}
 

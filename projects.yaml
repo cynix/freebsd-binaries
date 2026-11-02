@@ -235,6 +235,29 @@ samba-ldap:
       ln -sf /tmp/samba4 var/log/samba4
     entrypoint: [/usr/local/bin/groundcontrol, /usr/local/etc/groundcontrol.toml]
 
+sing-box:
+  source: sagernet/sing-box
+  builder: go
+  packages:
+    sing-box:
+      container:
+        user: sing-box=360  # v2ray
+  defaults:
+    package:
+      ldflags:
+        - -X=github.com/sagernet/sing-box/constant.Version={{ .Version }}
+        - -checklinkname=0
+      tags:
+        - with_gvisor
+        - with_quic
+        - with_wireguard
+        - with_utls
+        - with_acme
+        - with_clash_api
+        - with_tailscale
+        - badlinkname
+        - tfogo_checklinkname0
+
 snixy:
   container:
     assets:
@@ -269,28 +292,14 @@ step-posture-connector:
       container:
         user: step-posture-connector=266  # step
 
-sing-box:
-  source: sagernet/sing-box
-  builder: go
+super:
+  source: schiplat/super
+  builder: cargo
   packages:
-    sing-box:
-      container:
-        user: sing-box=360  # v2ray
-  defaults:
-    package:
-      ldflags:
-        - -X=github.com/sagernet/sing-box/constant.Version={{ .Version }}
-        - -checklinkname=0
-      tags:
-        - with_gvisor
-        - with_quic
-        - with_wireguard
-        - with_utls
-        - with_acme
-        - with_clash_api
-        - with_tailscale
-        - badlinkname
-        - tfogo_checklinkname0
+    super:
+      binaries:
+        - super
+        - superd
 
 victoria-logs:
   source:

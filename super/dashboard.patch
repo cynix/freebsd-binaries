@@ -1,0 +1,7 @@
+diff --git c/dashboard/dist/index.html i/dashboard/dist/index.html
+new file mode 100644
+index 0000000..d6afd7a
+--- /dev/null
++++ i/dashboard/dist/index.html
+@@ -0,0 +1 @@
++<!doctype html><title>-</title>

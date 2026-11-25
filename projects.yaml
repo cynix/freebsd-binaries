@@ -41,9 +41,13 @@ coredns:
       tags:
         - grpcnotrace
       before:
+        - git clone --depth=1 https://github.com/dokku/coredns-docker.git ../coredns-docker/src
+        - git -C ../coredns-docker/src apply ../networks.patch
         - sh -c 'echo docker:github.com/dokku/coredns-docker >> plugin.cfg'
         - go generate coredns.go
         - go get
+        - go mod edit -replace=github.com/dokku/coredns-docker=../coredns-docker/src
+        - go mod tidy
 
 diffnav:
   source: dlvhdr/diffnav

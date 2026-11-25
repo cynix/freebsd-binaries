@@ -1,0 +1,431 @@
+diff --git c/README.md i/README.md
+index dd4dcae..1586b6c 100644
+--- c/README.md
++++ i/README.md
+@@ -50,7 +50,7 @@ Start any Docker container and query it by name:
+ 
+ ```bash
+ docker run -d --name web nginx
+-dig @127.0.0.1 -p 1053 web.docker +short
++dig @127.0.0.1 -p 1053 web.bridge.docker +short
+ # → 172.17.0.2
+ ```
+ 
+diff --git c/all_networks_test.go i/all_networks_test.go
+new file mode 100644
+index 0000000..e6dd862
+--- /dev/null
++++ i/all_networks_test.go
+@@ -0,0 +1,68 @@
++package docker
++
++import (
++	"context"
++	"net"
++	"reflect"
++	"testing"
++
++	"github.com/docker/docker/api/types/container"
++	"github.com/docker/docker/api/types/network"
++)
++
++func TestGenerateAllNetworks(t *testing.T) {
++	inspect := container.InspectResponse{
++		ContainerJSONBase: &container.ContainerJSONBase{
++			Name: "/web",
++			HostConfig: &container.HostConfig{
++				NetworkMode: container.NetworkMode("missing-primary"),
++			},
++		},
++		Config: &container.Config{Labels: map[string]string{}},
++		NetworkSettings: &container.NetworkSettings{
++			Networks: map[string]*network.EndpointSettings{
++				"frontend": {IPAddress: "10.88.0.10", Aliases: []string{"public"}},
++				"backend":  {IPAddress: "10.89.0.10", GlobalIPv6Address: "2001:db8::10", Aliases: []string{"private"}},
++			},
++		},
++	}
++	input := GenerateRecordsInput{
++		Inspector:   &mockContainerInspector{inspections: map[string]container.InspectResponse{"id": inspect}},
++		Containers:  []container.Summary{{ID: "id"}},
++		Zones:       []string{"podman."},
++		LabelPrefix: "com.dokku.coredns-docker",
++	}
++	front := []net.IP{net.ParseIP("10.88.0.10")}
++	back := []net.IP{net.ParseIP("10.89.0.10"), net.ParseIP("2001:db8::10")}
++	want := map[string][]net.IP{
++		"web.frontend.podman.":    front,
++		"public.frontend.podman.": front,
++		"web.backend.podman.":     back,
++		"private.backend.podman.": back,
++	}
++	got, _, ptrs, _, _ := generateRecords(context.Background(), input)
++	if !reflect.DeepEqual(got, want) {
++		t.Fatalf("records: got %v, want %v", got, want)
++	}
++	if got := ptrs[mustReverseAddr("10.89.0.10")]; !reflect.DeepEqual(got, []string{"web.backend.podman.", "private.backend.podman."}) {
++		t.Fatalf("backend PTR records: %v", got)
++	}
++	input.Networks = []string{"backend"}
++	got, _, _, _, _ = generateRecords(context.Background(), input)
++	want = map[string][]net.IP{"web.podman.": back, "private.podman.": back}
++	if !reflect.DeepEqual(got, want) {
++		t.Fatalf("filtered records: got %v, want %v", got, want)
++	}
++	input.Networks = nil
++	inspect.Config.Labels[input.LabelPrefix+"/cname"] = "example.org"
++	got, _, _, cnames, _ := generateRecords(context.Background(), input)
++	wantCnames := map[string]string{
++		"web.frontend.podman.":    "example.org.",
++		"public.frontend.podman.": "example.org.",
++		"web.backend.podman.":     "example.org.",
++		"private.backend.podman.": "example.org.",
++	}
++	if len(got) != 0 || !reflect.DeepEqual(cnames, wantCnames) {
++		t.Fatalf("CNAME records: got %v, want %v; address records: %v", cnames, wantCnames, got)
++	}
++}
+diff --git c/docker.go i/docker.go
+index ba61ec8..00c7bb9 100644
+--- c/docker.go
++++ i/docker.go
+@@ -362,12 +362,16 @@ func (d *Docker) startEventLoop(ctx context.Context) {
+ 
+ 	filter := filters.NewArgs()
+ 	filter.Add("type", "container")
++	filter.Add("type", "network")
+ 	filter.Add("event", "start")
+ 	filter.Add("event", "die")
+ 	filter.Add("event", "destroy")
+ 	filter.Add("event", "stop")
+ 	filter.Add("event", "create")
+ 	filter.Add("event", "restart")
++	filter.Add("event", "connect")
++	filter.Add("event", "disconnect")
++	filter.Add("event", "rename")
+ 
+ 	backoff := 1 * time.Second
+ 
+@@ -598,49 +602,31 @@ func generateRecords(ctx context.Context, input GenerateRecordsInput) (map[strin
+ 			inspect.Config = &container.Config{Labels: map[string]string{}}
+ 		}
+ 
+-		// Determine the primary network name from NetworkMode
+-		primaryNetworkName := string(inspect.HostConfig.NetworkMode)
+-		if primaryNetworkName == "" || primaryNetworkName == "default" {
+-			primaryNetworkName = "bridge"
+-		}
+-
+-		// Determine which networks to process
++		// Select all attached networks, subject to the optional allowlist
+ 		type networkEntry struct {
+ 			name     string
+ 			settings *network.EndpointSettings
+ 		}
+ 		var networksToProcess []networkEntry
+-
+-		if len(input.Networks) > 0 {
+-			// Filter mode: check ALL attached networks against the allowed list
+-			allowedSet := make(map[string]bool, len(input.Networks))
+-			for _, n := range input.Networks {
+-				allowedSet[n] = true
++		allowedSet := make(map[string]bool, len(input.Networks))
++		for _, n := range input.Networks {
++			allowedSet[n] = true
++		}
++		// Sort network names for deterministic output
++		netNames := make([]string, 0, len(inspect.NetworkSettings.Networks))
++		for netName := range inspect.NetworkSettings.Networks {
++			netNames = append(netNames, netName)
++		}
++		sort.Strings(netNames)
++		for _, netName := range netNames {
++			netSettings := inspect.NetworkSettings.Networks[netName]
++			if (len(input.Networks) == 0 || allowedSet[netName]) && netSettings != nil {
++				networksToProcess = append(networksToProcess, networkEntry{name: netName, settings: netSettings})
+ 			}
+-			// Sort network names for deterministic output
+-			netNames := make([]string, 0, len(inspect.NetworkSettings.Networks))
+-			for netName := range inspect.NetworkSettings.Networks {
+-				netNames = append(netNames, netName)
+-			}
+-			sort.Strings(netNames)
+-			for _, netName := range netNames {
+-				netSettings := inspect.NetworkSettings.Networks[netName]
+-				if allowedSet[netName] && netSettings != nil {
+-					networksToProcess = append(networksToProcess, networkEntry{name: netName, settings: netSettings})
+-				}
+-			}
+-			if len(networksToProcess) == 0 {
+-				log.Debugf("Container %s not on any allowed network", c.ID)
+-				continue
+-			}
+-		} else {
+-			// No filter: use the primary network only
+-			netSettings, ok := inspect.NetworkSettings.Networks[primaryNetworkName]
+-			if !ok || netSettings == nil {
+-				log.Debugf("Container %s not on network %s", c.ID, primaryNetworkName)
+-				continue
+-			}
+-			networksToProcess = []networkEntry{{name: primaryNetworkName, settings: netSettings}}
++		}
++		if len(networksToProcess) == 0 {
++			log.Debugf("Container %s not on any allowed network", c.ID)
++			continue
+ 		}
+ 
+ 		// Compute per-container data once
+@@ -671,6 +657,37 @@ func generateRecords(ctx context.Context, input GenerateRecordsInput) (map[strin
+ 		// drops overlap.
+ 		templatedNames := renderNameTemplates(input.NameTemplates, baseName, c.ID, inspect.Config.Labels)
+ 
++		// Collect the names for the supplied networks
++		namesForNetworks := func(networks []networkEntry) []string {
++			names := []string{baseName}
++			for _, ne := range networks {
++				names = append(names, ne.settings.Aliases...)
++				names = append(names, ne.settings.DNSNames...)
++			}
++			if project != "" && service != "" {
++				names = append(names, project+"."+service)
++			}
++			names = append(names, hostnameNames...)
++			return append(names, templatedNames...)
++		}
++
++		// Without an explicit network filter, qualify names by network so
++		// records for different endpoints cannot conflict.
++		networkNames := func(networks []networkEntry) []string {
++			if len(input.Networks) > 0 {
++				return namesForNetworks(networks)
++			}
++			var names []string
++			for _, ne := range networks {
++				for _, name := range namesForNetworks([]networkEntry{ne}) {
++					if name != "" {
++						names = append(names, name+"."+ne.name)
++					}
++				}
++			}
++			return names
++		}
++
+ 		// Parse wildcard label
+ 		wildcardLabel := input.LabelPrefix + "/wildcard"
+ 		if input.LabelPrefix == "" {
+@@ -736,16 +753,7 @@ func generateRecords(ctx context.Context, input GenerateRecordsInput) (map[strin
+ 			// Union names across all selected networks (same rule as host mode),
+ 			// because a CNAME has no IP affinity — the destination is the
+ 			// external name the user asked us to alias to.
+-			names := []string{baseName}
+-			for _, ne := range networksToProcess {
+-				names = append(names, ne.settings.Aliases...)
+-				names = append(names, ne.settings.DNSNames...)
+-			}
+-			if project != "" && service != "" {
+-				names = append(names, project+"."+service)
+-			}
+-			names = append(names, hostnameNames...)
+-			names = append(names, templatedNames...)
++			names := networkNames(networksToProcess)
+ 
+ 			seen := make(map[string]bool, len(names))
+ 			uniqueNames := names[:0]
+@@ -835,16 +843,7 @@ func generateRecords(ctx context.Context, input GenerateRecordsInput) (map[strin
+ 
+ 			// In host mode there is only one logical destination, so union
+ 			// names across all selected networks.
+-			names := []string{baseName}
+-			for _, ne := range networksToProcess {
+-				names = append(names, ne.settings.Aliases...)
+-				names = append(names, ne.settings.DNSNames...)
+-			}
+-			if project != "" && service != "" {
+-				names = append(names, project+"."+service)
+-			}
+-			names = append(names, hostnameNames...)
+-			names = append(names, templatedNames...)
++			names := networkNames(networksToProcess)
+ 
+ 			// Deduplicate names (same rules as the default path).
+ 			seen := make(map[string]bool, len(names))
+@@ -1090,16 +1089,7 @@ func generateRecords(ctx context.Context, input GenerateRecordsInput) (map[strin
+ 				continue
+ 			}
+ 
+-			names := []string{baseName}
+-			names = append(names, ne.settings.Aliases...)
+-			names = append(names, ne.settings.DNSNames...)
+-
+-			if project != "" && service != "" {
+-				names = append(names, project+"."+service)
+-			}
+-
+-			names = append(names, hostnameNames...)
+-			names = append(names, templatedNames...)
++			names := networkNames([]networkEntry{ne})
+ 
+ 			// Deduplicate names (case-insensitive, preserving insertion order) to
+ 			// avoid producing duplicate records when a container's name overlaps
+diff --git c/docs/configuration.md i/docs/configuration.md
+index 85748df..295f62d 100644
+--- c/docs/configuration.md
++++ i/docs/configuration.md
+@@ -105,7 +105,7 @@ Lower values recover faster from outages at the cost of slightly more reconnect
+ 
+ ## `networks`
+ 
+-Limit the plugin to containers attached to a whitelist of Docker networks. If unset, all networks are considered.
++Limit the plugin to containers attached to a whitelist of Docker networks. If unset, all attached networks are considered and DNS names are qualified by network (for example, `web.frontend.docker.` and `web.backend.docker.` for a container named `web` in the `docker.` zone). Each name resolves using the corresponding network endpoint. With an explicit whitelist, names retain their existing format without the network suffix.
+ 
+ **Why this exists:** Production hosts frequently run many unrelated Docker networks (`bridge`, an app network, a monitoring network, the swarm overlay, etc.). Without a whitelist, every container on every network would get DNS records, which is usually not what you want -- particularly if containers on different networks reuse the same name. `networks` restricts the plugin to the networks you care about.
+ 
+diff --git c/generate_records_test.go i/generate_records_test.go
+index f46a03e..feaa45a 100644
+--- c/generate_records_test.go
++++ i/generate_records_test.go
+@@ -50,9 +50,10 @@ func TestGenerateRecords(t *testing.T) {
+ 	ctx := context.Background()
+ 
+ 	tests := []struct {
+-		name     string
+-		input    GenerateRecordsInput
+-		expected generateRecordsExpected
++		name        string
++		input       GenerateRecordsInput
++		expected    generateRecordsExpected
++		allNetworks bool
+ 	}{
+ 		{
+ 			name: "basic container name",
+@@ -1049,7 +1050,8 @@ func TestGenerateRecords(t *testing.T) {
+ 			},
+ 		},
+ 		{
+-			name: "multi-network container with no filter uses primary only",
++			name:        "multi-network container with no filter uses all networks",
++			allNetworks: true,
+ 			input: GenerateRecordsInput{
+ 				Inspector: &mockContainerInspector{
+ 					inspections: map[string]container.InspectResponse{
+@@ -1078,10 +1080,14 @@ func TestGenerateRecords(t *testing.T) {
+ 			},
+ 			expected: generateRecordsExpected{
+ 				records: map[string][]net.IP{
+-					"web.docker.": {net.ParseIP("172.17.0.2")},
++					"web.bridge.docker.": {net.ParseIP("172.17.0.2")},
++					"web.custom.docker.": {net.ParseIP("10.0.0.2")},
+ 				},
+ 				srvs: map[string][]srvRecord{},
+-				ptrs: map[string][]string{mustReverseAddr("172.17.0.2"): {"web.docker."}},
++				ptrs: map[string][]string{
++					mustReverseAddr("172.17.0.2"): {"web.bridge.docker."},
++					mustReverseAddr("10.0.0.2"):   {"web.custom.docker."},
++				},
+ 			},
+ 		},
+ 		{
+@@ -3717,7 +3723,8 @@ func TestGenerateRecords(t *testing.T) {
+ 			expected: generateRecordsExpected{},
+ 		},
+ 		{
+-			name: "container with empty NetworkMode falls back to bridge",
++			name:        "container with empty NetworkMode discovers attached networks",
++			allNetworks: true,
+ 			input: GenerateRecordsInput{
+ 				Inspector: &mockContainerInspector{
+ 					inspections: map[string]container.InspectResponse{
+@@ -3749,14 +3756,15 @@ func TestGenerateRecords(t *testing.T) {
+ 			},
+ 			expected: generateRecordsExpected{
+ 				records: map[string][]net.IP{
+-					"web.docker.": {net.ParseIP("172.17.0.2")},
++					"web.bridge.docker.": {net.ParseIP("172.17.0.2")},
+ 				},
+ 				srvs: map[string][]srvRecord{},
+-				ptrs: map[string][]string{mustReverseAddr("172.17.0.2"): {"web.docker."}},
++				ptrs: map[string][]string{mustReverseAddr("172.17.0.2"): {"web.bridge.docker."}},
+ 			},
+ 		},
+ 		{
+-			name: "container with default NetworkMode falls back to bridge",
++			name:        "container with default NetworkMode discovers attached networks",
++			allNetworks: true,
+ 			input: GenerateRecordsInput{
+ 				Inspector: &mockContainerInspector{
+ 					inspections: map[string]container.InspectResponse{
+@@ -3788,14 +3796,15 @@ func TestGenerateRecords(t *testing.T) {
+ 			},
+ 			expected: generateRecordsExpected{
+ 				records: map[string][]net.IP{
+-					"web.docker.": {net.ParseIP("172.17.0.2")},
++					"web.bridge.docker.": {net.ParseIP("172.17.0.2")},
+ 				},
+ 				srvs: map[string][]srvRecord{},
+-				ptrs: map[string][]string{mustReverseAddr("172.17.0.2"): {"web.docker."}},
++				ptrs: map[string][]string{mustReverseAddr("172.17.0.2"): {"web.bridge.docker."}},
+ 			},
+ 		},
+ 		{
+-			name: "container whose primary network is not in NetworkSettings is skipped",
++			name:        "container whose primary network is absent still uses attached networks",
++			allNetworks: true,
+ 			input: GenerateRecordsInput{
+ 				Inspector: &mockContainerInspector{
+ 					inspections: map[string]container.InspectResponse{
+@@ -3825,7 +3834,12 @@ func TestGenerateRecords(t *testing.T) {
+ 				Zones:       []string{"docker."},
+ 				LabelPrefix: "com.dokku.coredns-docker",
+ 			},
+-			expected: generateRecordsExpected{},
++			expected: generateRecordsExpected{
++				records: map[string][]net.IP{
++					"web.bridge.docker.": {net.ParseIP("172.17.0.2")},
++				},
++				ptrs: map[string][]string{mustReverseAddr("172.17.0.2"): {"web.bridge.docker."}},
++			},
+ 		},
+ 		{
+ 			name: "container with non-numeric SRV label port is skipped",
+@@ -4880,6 +4894,10 @@ func TestGenerateRecords(t *testing.T) {
+ 
+ 	for _, tt := range tests {
+ 		t.Run(tt.name, func(t *testing.T) {
++			// Tests of the existing unqualified naming mode use an explicit filter.
++			if len(tt.input.Networks) == 0 && !tt.allNetworks {
++				tt.input.Networks = []string{"bridge"}
++			}
+ 			records, srvs, ptrs, cnames, txts := generateRecords(ctx, tt.input)
+ 
+ 			// Check records
+@@ -5084,6 +5102,7 @@ func TestGenerateRecordsNameFromLabels(t *testing.T) {
+ 		},
+ 		Zones:       []string{"docker."},
+ 		LabelPrefix: "com.dokku.coredns-docker",
++		Networks:    []string{"bridge"},
+ 		NameTemplates: []*template.Template{
+ 			mustTmpl(`{{label "com.dokku.app-name"}}.{{label "com.dokku.process-type"}}`),
+ 			mustTmpl(`{{label "com.dokku.app-name"}}`),
+diff --git c/integration_test.go i/integration_test.go
+index 32a227f..e9748bd 100644
+--- c/integration_test.go
++++ i/integration_test.go
+@@ -79,6 +79,10 @@ func TestMain(m *testing.M) {
+ func setupIntegrationDocker(t *testing.T, networks []string) (*Docker, *client.Client) {
+ 	t.Helper()
+ 
++	// Existing integration tests use unqualified names on the bridge network.
++	if len(networks) == 0 {
++		networks = []string{"bridge"}
++	}
+ 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+ 	if err != nil {
+ 		t.Fatalf("Failed to create Docker client: %v", err)
+@@ -547,6 +551,7 @@ func TestIntegrationMultiZone(t *testing.T) {
+ 		zones:       []string{"docker.", "internal."},
+ 		labelPrefix: "com.dokku.coredns-docker",
+ 		client:      cli,
++		networks:    []string{"bridge"},
+ 		records:     make(map[string][]net.IP),
+ 		srvs:        make(map[string][]srvRecord),
+ 	}
